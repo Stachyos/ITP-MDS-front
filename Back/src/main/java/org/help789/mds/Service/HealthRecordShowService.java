@@ -1,22 +1,19 @@
 package org.help789.mds.Service;
 
-import org.help789.mds.Entity.vo.HealthRecordShow;
+import org.help789.mds.Entity.Vo.HealthRecordShowVo;
 
 import java.util.List;
 
 public interface HealthRecordShowService {
 
     /** 展示全部 */
-    List<HealthRecordShow> listAll();
-
-    /** 按ID查询单条 */
-    HealthRecordShow getById(Long recordId);
+    List<HealthRecordShowVo> listAll();
 
     /** 新增 */
-    HealthRecordShow create(HealthRecordShow vo);
+    HealthRecordShowVo create(HealthRecordShowVo vo);
 
     /** 修改（按ID覆盖式更新） */
-    HealthRecordShow update(Long recordId, HealthRecordShow vo);
+    HealthRecordShowVo update(Long recordId, HealthRecordShowVo vo);
 
     /** 删除单条 */
     void delete(Long recordId);
