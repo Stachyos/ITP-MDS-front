@@ -2,7 +2,7 @@ package org.help789.mds.Service.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
 import org.help789.mds.Service.HealthRecordShowService;
-import org.help789.mds.Entity.vo.HealthRecordShow;
+import org.help789.mds.Entity.Vo.HealthRecordShow;
 import org.help789.mds.Entity.HealthRecord;
 import org.help789.mds.repository.HealthRecordRepository;
 import org.springframework.stereotype.Service;

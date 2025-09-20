@@ -1,6 +1,6 @@
 package org.help789.mds.Service;
 
-import org.help789.mds.Entity.vo.HealthRecordShow;
+import org.help789.mds.Entity.Vo.HealthRecordShow;
 
 import java.util.List;
 
