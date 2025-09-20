@@ -9,14 +9,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/HealthRecordShow")
+@RequestMapping("/HealthRecordShow")
 @RequiredArgsConstructor
 public class HealthRecordShowController {
 
     /** 注意：要用 final，配合 @RequiredArgsConstructor 才会注入 */
     private final HealthRecordShowService healthRecordService;
 
-    /** 展示全部 => GET /api/HealthRecordShow/getAll */
+    /** 展示全部 => GET /HealthRecordShow/getAll */
     @GetMapping("/getAll")
     public Result<List<HealthRecordShowVo>> getAll() {
         try {
@@ -27,7 +27,7 @@ public class HealthRecordShowController {
         }
     }
 
-    /** 新增 => POST /api/HealthRecordShow/create */
+    /** 新增 => POST /HealthRecordShow/create */
     @PostMapping("/create")
     public Result<HealthRecordShowVo> create(@RequestBody HealthRecordShowVo body) {
         try {
@@ -38,7 +38,7 @@ public class HealthRecordShowController {
         }
     }
 
-    /** 修改（按ID覆盖更新） => PUT /api/HealthRecordShow/update/{id} */
+    /** 修改（按ID覆盖更新） => PUT /HealthRecordShow/update/{id} */
     @PutMapping("/update/{id}")
     public Result<HealthRecordShowVo> update(@PathVariable("id") Long id,
                                              @RequestBody HealthRecordShowVo body) {
@@ -51,7 +51,7 @@ public class HealthRecordShowController {
         }
     }
 
-    /** 删除 => DELETE /api/HealthRecordShow/delete/{id} */
+    /** 删除 => DELETE /HealthRecordShow/delete/{id} */
     @DeleteMapping("/delete/{id}")
     public Result<Long> delete(@PathVariable("id") Long id) {
         try {
