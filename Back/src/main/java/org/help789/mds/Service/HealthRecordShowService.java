@@ -9,9 +9,6 @@ public interface HealthRecordShowService {
     /** 展示全部 */
     List<HealthRecordShow> listAll();
 
-    /** 按ID查询单条 */
-    HealthRecordShow getById(Long recordId);
-
     /** 新增 */
     HealthRecordShow create(HealthRecordShow vo);
 
