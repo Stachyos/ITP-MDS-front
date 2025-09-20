@@ -2,10 +2,12 @@ server:
   port: 8080
 
 spring:
+  application:
+    name: MDS
   datasource:
-    url: jdbc:mysql://<REMOTE_HOST>:3306/<DB_NAME>?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: <USERNAME>
-    password: <PASSWORD>
+    url: "jdbc:mysql://<REMOTE_HOST>:3306/<DB_NAME>?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true"
+    username: "<USERNAME>"
+    password: "<PASSWORD>"
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 20
@@ -13,12 +15,16 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
-
   jpa:
     hibernate:
-      ddl-auto: update   # 首次运行可自动建表；若你们远端库已建表，改为 validate 更安全
+      ddl-auto: update   # 远端库已建表建议用 validate
     show-sql: true
     properties:
       hibernate.format_sql: true
       hibernate.jdbc.time_zone: Asia/Shanghai
       hibernate.dialect: org.hibernate.dialect.MySQLDialect
+
+mds:
+  user:
+    login-expires-minutes: 120
+    jwt-token-key: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
