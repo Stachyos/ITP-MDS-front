@@ -97,7 +97,10 @@
 <script setup>
 import { reactive, ref, computed, onBeforeUnmount } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import axios from 'axios'
+import { apiLogin, apiLoginByEmail, apiSendEmailCode } from '@/api/User.js'
+
+import { useTokenStore } from '@/utils/stores/token'
+import { pinia } from '@/utils/stores'
 
 /** login mode: 'password' | 'email' */
 const mode = ref('password')
@@ -106,13 +109,10 @@ const formRef = ref()
 const loading = ref(false)
 
 const form = reactive({
-  // account/password login
   account: '',
   password: '',
-  // email code login
   email: '',
   code: '',
-  // common
   remember: true
 })
 
@@ -156,82 +156,84 @@ function startCountdown(sec = 60) {
 onBeforeUnmount(() => timer && clearInterval(timer))
 
 async function onSendCode() {
-  // quick email check
   if (!form.email || !/.+@.+\..+/.test(form.email)) {
     ElMessage.warning('Please enter a valid email first')
     return
   }
   try {
-    // your backend API to send email code
-    // e.g. POST /api/auth/send-email-code  { email }
-    await axios.post('/api/auth/send-email-code', { email: form.email })
-    ElMessage.success('Verification code sent, please check your inbox')
-    startCountdown(60)
+    const r = await apiSendEmailCode({ email: form.email })
+    if (r?.reply) {
+      ElMessage.success(r?.message || 'Verification code sent, please check your inbox')
+      startCountdown(60)
+    } else {
+      throw new Error(r?.message || 'Failed to send')
+    }
   } catch (e) {
-    ElMessage.error(e?.response?.data?.message || 'Failed to send, try again later')
+    ElMessage.error(e?.message || 'Failed to send, try again later')
   }
 }
-
 /* ========== submit login ========== */
 async function onSubmit() {
   try {
     await formRef.value.validate()
-
     loading.value = true
-    let resp
 
+    let resp
     if (mode.value === 'password') {
-      // account/password login: POST /api/user/login
-      resp = await axios.post('/api/user/login', {
-        account: form.account,
-        password: form.password,
-        remember: form.remember
-      })
+      resp = await apiLogin({ account: form.account, password: form.password, remember: form.remember })
     } else {
-      // email code login: POST /api/user/login-email
-      resp = await axios.post('/api/user/login-email', {
-        email: form.email,
-        code: form.code,
-        remember: form.remember
-      })
+      resp = await apiLoginByEmail({ email: form.email, code: form.code, remember: form.remember })
     }
 
-    const { data } = resp
-    // expected: { reply: true, data: "token", message: "Login success" }
-    if (data?.reply) {
-      const token = data.data
-      // remember me: localStorage; otherwise sessionStorage
+    if (resp?.reply) {
+      const token = resp.data
+
+      // 用 Pinia 保存
+      const tokenStore = useTokenStore(pinia)
+      tokenStore.setToken(token, form.remember)
+
+      // （可选）也写入本地存储
       const store = form.remember ? localStorage : sessionStorage
       store.setItem('auth_token', token)
 
-      ElMessage.success(data?.message || 'Login success')
-      // navigate to home or previous route
+      console.log('✅ Login success:', {
+        account: form.account || form.email,
+        mode: mode.value,
+        tokenPreview: String(token).slice(0, 16) + '...'
+      })
+
+      ElMessage.success(resp?.message || 'Login success')
+
+      // ←←← 在这里睡 10 秒
+      await new Promise(resolve => setTimeout(resolve, 10_000))
+
+      // 再跳转
       window.location.href = '/'
     } else {
-      throw new Error(data?.message || 'Login failed')
+      throw new Error(resp?.message || 'Login failed')
     }
   } catch (err) {
-    if (err?.name !== 'Error') {
-      // form validation error already shown by Element Plus
-    } else {
-      ElMessage.error(err.message)
-    }
+    if (err?.message) ElMessage.error(err.message)
   } finally {
     loading.value = false
   }
 }
 
+
+
 function onForgot() {
-  ElMessageBox.alert('Please contact the administrator or go to the password recovery page.', 'Forgot Password', {
-    confirmButtonText: 'OK'
-  })
+  ElMessageBox.alert(
+      'Please contact the administrator or go to the password recovery page.',
+      'Forgot Password',
+      { confirmButtonText: 'OK' }
+  )
 }
 
 function onRegister() {
-  // navigate to register page (adjust to your routes)
   window.location.href = '/register'
 }
 </script>
+
 
 <style scoped>
 .login-page {

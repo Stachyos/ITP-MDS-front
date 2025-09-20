@@ -3,6 +3,7 @@ package org.help789.mds.Service.ServiceImpl;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.help789.mds.Entity.User;
+import org.help789.mds.Entity.Vo.RegisterReq;
 import org.help789.mds.Service.JWTservice;
 import org.help789.mds.Service.UserService;
 import org.help789.mds.Utils.pojo.Result;
@@ -12,13 +13,16 @@ import org.springframework.stereotype.Service;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
 @Service
 public class UserServiceImpl implements UserService {
 
-
+    private static final Set<String> ROLE_WHITELIST = Set.of(
+            "administrators", "researchers", "analysts", "auditors"
+    );
     @Resource
     private UserRepository userRepository;
 
@@ -27,6 +31,38 @@ public class UserServiceImpl implements UserService {
 
     @Resource
     private JWTservice jwtservice;
+
+    @Override
+    public Result<String> register(RegisterReq req) {
+        // 1) 业务校验
+        if (!req.getPassword().equals(req.getConfirmPassword())) {
+            return Result.failed("passwords do not match");
+        }
+        if (!ROLE_WHITELIST.contains(req.getRole())) {
+            return Result.failed("invalid role");
+        }
+        if (userRepository.existsByAccount(req.getAccount())) {
+            return Result.failed("account already exists");
+        }
+        if (userRepository.existsByEmail(req.getEmail())) {
+            return Result.failed("email already exists");
+        }
+
+        // 2) 保存用户（密码用 BCrypt 存 hash）
+        String hash = passwordEncoder.encode(req.getPassword());
+        User user = User.builder()
+                .realName(req.getAccount())         // 没有单独 realName 的话先用 account 填；有的话改成 req.getRealName()
+                .account(req.getAccount())
+                .passwordHash(hash)
+                .email(req.getEmail())
+                .role(req.getRole())
+                .build();
+
+        userRepository.save(user);
+
+        // 3) 返回成功
+        return Result.success("registered successfully",user.getRealName());
+    }
 
     @Override
     public Result<String> loginBySecretWithPassword(String account, String password) {
