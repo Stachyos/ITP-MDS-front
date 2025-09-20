@@ -2,7 +2,7 @@ package org.help789.mds.Service.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
 import org.help789.mds.Service.HealthRecordShowService;
-import org.help789.mds.Entity.vo.HealthRecordShow;
+import org.help789.mds.Entity.Vo.HealthRecordShowVo;
 import org.help789.mds.Entity.HealthRecord;
 import org.help789.mds.repository.HealthRecordRepository;
 import org.springframework.stereotype.Service;
@@ -19,7 +19,7 @@ public class HealthRecordShowServiceImpl implements HealthRecordShowService {
 
     // ================== 查询 ==================
     @Override
-    public List<HealthRecordShow> listAll() {
+    public List<HealthRecordShowVo> listAll() {
         return repository.findAll()
                 .stream()
                 .map(this::entity2Vo)
@@ -28,7 +28,7 @@ public class HealthRecordShowServiceImpl implements HealthRecordShowService {
 
     // ================== 新增 ==================
     @Override
-    public HealthRecordShow create(HealthRecordShow vo) {
+    public HealthRecordShowVo create(HealthRecordShowVo vo) {
         HealthRecord entity = vo2Entity(vo);
         // 由数据库自增
         entity.setRecordId(null);
@@ -38,7 +38,7 @@ public class HealthRecordShowServiceImpl implements HealthRecordShowService {
 
     // ================== 修改 ==================
     @Override
-    public HealthRecordShow update(Long recordId, HealthRecordShow vo) {
+    public HealthRecordShowVo update(Long recordId, HealthRecordShowVo vo) {
         HealthRecord exist = repository.findById(recordId)
                 .orElseThrow(() -> new IllegalArgumentException("Record not found: " + recordId));
 
@@ -59,8 +59,8 @@ public class HealthRecordShowServiceImpl implements HealthRecordShowService {
     }
 
     // ================== 映射：Entity -> VO ==================
-    private HealthRecordShow entity2Vo(HealthRecord entity) {
-        HealthRecordShow vo = new HealthRecordShow();
+    private HealthRecordShowVo entity2Vo(HealthRecord entity) {
+        HealthRecordShowVo vo = new HealthRecordShowVo();
         vo.setRecordId(entity.getRecordId());
         vo.setName(entity.getName());
         vo.setSex(entity.getSex() == null ? null : entity.getSex().name());
@@ -83,7 +83,7 @@ public class HealthRecordShowServiceImpl implements HealthRecordShowService {
     }
 
     // ================== 映射：VO -> Entity ==================
-    private HealthRecord vo2Entity(HealthRecordShow vo) {
+    private HealthRecord vo2Entity(HealthRecordShowVo vo) {
         HealthRecord entity = new HealthRecord();
         entity.setRecordId(vo.getRecordId());
         entity.setName(vo.getName());

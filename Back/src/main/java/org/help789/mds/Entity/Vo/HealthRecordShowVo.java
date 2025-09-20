@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class HealthRecordShow {
+public class HealthRecordShowVo {
     private Long recordId;
     private String name;
     private String sex;     // 男/女/其他/未知
