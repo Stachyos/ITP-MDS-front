@@ -5,6 +5,7 @@ const routes = [
     { path: '/', redirect: '/login' },
     { path: '/login', component: Login },
     { path: '/register', component: () => import('@/views/Register.vue') }, // ← 已添加
+    { path: '/HealthRecordShow', component: () => import('@/components/HealthRecordShow.vue') },
     // 示例：登录后首页
     // { path: '/home', component: () => import('@/views/Home.vue') },
     // 404
@@ -18,7 +19,7 @@ const router = createRouter({
 
 
 router.beforeEach((to, _from, next) => {
-    const publicPages = ['/login', '/register']
+    const publicPages = ['/login', '/register','/HealthRecordShow']
     const authed =
         localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token')
     if (!authed && !publicPages.includes(to.path)) return next('/login')
