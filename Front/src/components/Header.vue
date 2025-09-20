@@ -1,22 +1,21 @@
 <template>
   <el-header class="main-header">
     <div class="header-left">
-      <h2 class="system-title">数据管理系统</h2>
+      <h2 class="system-title">Health Big Data Application</h2>
       <el-menu
           :default-active="activeIndex"
           mode="horizontal"
           class="nav-menu"
           @select="handleSelect"
+          :ellipsis="false"
       >
-        <el-menu-item index="1">首页</el-menu-item>
+        <el-menu-item index="1">Home</el-menu-item>
         <el-sub-menu index="2">
-          <template #title>数据管理</template>
-          <el-menu-item index="2-1">用户数据</el-menu-item>
-          <el-menu-item index="2-2">产品数据</el-menu-item>
-          <el-menu-item index="2-3">订单数据</el-menu-item>
+          <template #title>Visualization</template>
+          <el-menu-item index="2-1">Analysis</el-menu-item>
+          <el-menu-item index="2-2">Display</el-menu-item>
         </el-sub-menu>
-        <el-menu-item index="3">统计分析</el-menu-item>
-        <el-menu-item index="4">系统设置</el-menu-item>
+        <el-menu-item index="3">Permission Management</el-menu-item>
       </el-menu>
     </div>
 
