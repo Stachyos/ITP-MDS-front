@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Login from '@/views/Login.vue'
+import HomeTable from '@/views/HomeTable.vue'
 
 const routes = [
     { path: '/', redirect: '/login' },
@@ -8,7 +9,8 @@ const routes = [
     // 示例：登录后首页
     // { path: '/home', component: () => import('@/views/Home.vue') },
     // 404
-    { path: '/:pathMatch(.*)*', redirect: '/login' }
+    { path: '/:pathMatch(.*)*', redirect: '/login' },
+    { path: '/homeTable', component: HomeTable},
 ]
 
 const router = createRouter({
@@ -18,7 +20,7 @@ const router = createRouter({
 
 
 router.beforeEach((to, _from, next) => {
-    const publicPages = ['/login', '/register']
+    const publicPages = ['/login', '/register', '/homeTable']
     const authed =
         localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token')
     if (!authed && !publicPages.includes(to.path)) return next('/login')
