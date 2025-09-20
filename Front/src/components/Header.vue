@@ -69,28 +69,19 @@ const activeIndex = ref('1')
 const username = ref('管理员')
 const avatarUrl = ref('https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png')
 
+// 菜单和路由的映射关系
+const menuRoutes = {
+  '1': '/homeTable',
+  '2-1': '/analysis',
+  '2-2': '/display',
+  '3': '/permissionManagement'
+}
+
 const handleSelect = (key) => {
   console.log('Selected menu:', key)
-  // 根据key进行路由跳转
-  switch(key) {
-    case '1':
-      router.push('/homeTable')
-      break
-    case '2-1':
-      // 用户数据页面
-      break
-    case '2-2':
-      // 产品数据页面
-      break
-    case '2-3':
-      // 订单数据页面
-      break
-    case '3':
-      // 统计分析页面
-      break
-    case '4':
-      // 系统设置页面
-      break
+  const path = menuRoutes[key]
+  if (path) {
+    router.push(path)
   }
 }
 
