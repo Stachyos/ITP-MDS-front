@@ -1,7 +1,7 @@
 package org.help789.mds.Controller;
 
 import lombok.RequiredArgsConstructor;
-import org.help789.mds.Entity.Vo.HealthRecordShow;
+import org.help789.mds.Entity.Vo.HealthRecordShowVo;
 import org.help789.mds.Service.HealthRecordShowService;
 import org.help789.mds.Utils.pojo.Result;
 import org.springframework.web.bind.annotation.*;
@@ -18,9 +18,9 @@ public class HealthRecordShowController {
 
     /** 展示全部 => GET /api/HealthRecordShow/getAll */
     @GetMapping("/getAll")
-    public Result<List<HealthRecordShow>> getAll() {
+    public Result<List<HealthRecordShowVo>> getAll() {
         try {
-            List<HealthRecordShow> list = healthRecordService.listAll();
+            List<HealthRecordShowVo> list = healthRecordService.listAll();
             return Result.success(list);
         } catch (Exception e) {
             return Result.failed(e.getMessage());
@@ -29,9 +29,9 @@ public class HealthRecordShowController {
 
     /** 新增 => POST /api/HealthRecordShow/create */
     @PostMapping("/create")
-    public Result<HealthRecordShow> create(@RequestBody HealthRecordShow body) {
+    public Result<HealthRecordShowVo> create(@RequestBody HealthRecordShowVo body) {
         try {
-            HealthRecordShow created = healthRecordService.create(body);
+            HealthRecordShowVo created = healthRecordService.create(body);
             return Result.success("created", created);
         } catch (Exception e) {
             return Result.failed(e.getMessage());
@@ -40,11 +40,11 @@ public class HealthRecordShowController {
 
     /** 修改（按ID覆盖更新） => PUT /api/HealthRecordShow/update/{id} */
     @PutMapping("/update/{id}")
-    public Result<HealthRecordShow> update(@PathVariable("id") Long id,
-                                           @RequestBody HealthRecordShow body) {
+    public Result<HealthRecordShowVo> update(@PathVariable("id") Long id,
+                                             @RequestBody HealthRecordShowVo body) {
         try {
             body.setRecordId(id); // 以路径ID为准
-            HealthRecordShow updated = healthRecordService.update(id, body);
+            HealthRecordShowVo updated = healthRecordService.update(id, body);
             return Result.success("updated", updated);
         } catch (Exception e) {
             return Result.failed(e.getMessage());
