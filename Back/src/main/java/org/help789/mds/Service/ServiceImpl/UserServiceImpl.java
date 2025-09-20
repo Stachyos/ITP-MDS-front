@@ -11,12 +11,12 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
-    public Result<String> loginBySecretWithPassword(String secret) {
+    public Result<String> loginBySecretWithPassword(String account, String password) {
         return null;
     }
 
     @Override
-    public Result<String> loginByEmail(String username) {
+    public Result<String> loginByEmail(String email) {
         return null;
     }
 

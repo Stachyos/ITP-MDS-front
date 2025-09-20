@@ -4,8 +4,8 @@ import org.help789.mds.Utils.pojo.Result;
 
 public interface UserService {
 
-    public Result<String> loginBySecretWithPassword(String secret);
+    public Result<String> loginBySecretWithPassword(String account, String password);
 
-    public Result<String> loginByEmail(String username);
+    public Result<String> loginByEmail(String email);
 
 }
