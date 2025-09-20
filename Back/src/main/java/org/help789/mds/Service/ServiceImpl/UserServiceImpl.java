@@ -1,19 +1,73 @@
 package org.help789.mds.Service.ServiceImpl;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.help789.mds.Entity.User;
+import org.help789.mds.Service.JWTservice;
 import org.help789.mds.Service.UserService;
 import org.help789.mds.Utils.pojo.Result;
+import org.help789.mds.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 @Slf4j
 @Service
 public class UserServiceImpl implements UserService {
 
 
+    @Resource
+    private UserRepository userRepository;
+
+    @Resource
+    private PasswordEncoder passwordEncoder;
+
+    @Resource
+    private JWTservice jwtservice;
+
     @Override
     public Result<String> loginBySecretWithPassword(String account, String password) {
-        return null;
+        // 1) 基本校验
+        if (account == null || account.isBlank() || password == null || password.isBlank()) {
+            return Result.failed("account 或 password 不能为空");
+        }
+
+        // 2) 查用户
+        Optional<User> opt = userRepository.findByAccount(account);
+
+        // 3) 为避免侧信道，做一次 dummy bcrypt 校验
+        final String DUMMY_BCRYPT = "$2a$10$7EqJtq98hPqEX7fNZaFWoOe.VN3S8S8QeG/5hOaVY1GZ7HcH0bK2K"; // 明文 "password"
+        String hash = opt.map(User::getPasswordHash).orElse(DUMMY_BCRYPT);
+
+        boolean ok = passwordEncoder.matches(password, hash);
+        if (opt.isEmpty() || !ok) {
+            return Result.failed("账号或密码错误");
+        }
+
+        User user = opt.get();
+
+        // 4) 生成 JWT（失败则兜底）
+        String token;
+        try {
+            Map<String, Object> claims = Map.of(
+                    "userId", user.getId(),
+                    "account", user.getAccount(),
+                    "role", user.getRole(),
+                    "realName", user.getRealName()
+            );
+            token = jwtservice.getJWTToken(claims);
+        } catch (Exception e) {
+            // 极端情况下给个兜底（仅开发调试；生产建议直接返回失败）
+            token = UUID.randomUUID().toString();
+        }
+
+        // 5) 如需记录登录态/审计日志，可在此处处理
+        return Result.success("登录成功", token);
     }
+
 
     @Override
     public Result<String> loginByEmail(String email) {

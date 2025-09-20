@@ -1,4 +1,4 @@
-package org.help789.mds.Entity.vo;
+package org.help789.mds.Entity.Vo;
 
 import lombok.*;
 import java.math.BigDecimal;

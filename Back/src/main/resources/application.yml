@@ -5,9 +5,9 @@ spring:
   application:
     name: MDS
   datasource:
-    url: "jdbc:mysql://<REMOTE_HOST>:3306/<DB_NAME>?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true"
-    username: "<USERNAME>"
-    password: "<PASSWORD>"
+    url: "jdbc:mysql://47.243.29.156:3306/ITP-database"
+    username: "ITP-database"
+    password: "0296e0a475cb8e5b"
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 20
