@@ -86,4 +86,13 @@ public class HealthRecord {
     @Column(name = "creatinine", precision = 7, scale = 2)
     @Comment("肌酐")
     private BigDecimal creatinine;
+
+    @Column(name = "weight_check_result", length = 50)
+    @Comment("体重检查结果")
+    private String weightCheckResult; // 允许值：正常/偏瘦/偏胖/超重/肥胖/未知（缺失填“未知”）
+
+    @Column(name = "diabetes", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    @Builder.Default
+    @Comment("是否糖尿病")
+    private Boolean diabetes = false; // 缺失填 false
 }
