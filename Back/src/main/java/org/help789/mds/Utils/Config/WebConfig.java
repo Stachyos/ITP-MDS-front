@@ -1,5 +1,6 @@
 package org.help789.mds.Utils.Config;
 
+import jakarta.annotation.Resource;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -8,20 +9,24 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
+    @Resource
+    private AuthInterceptor authInterceptor;
+
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**") // 你的后端接口前缀
-                .allowedOrigins("http://localhost:7488") // 前端地址
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
-                .allowedHeaders("Authorization", "Content-Type", "X-Requested-With")
+        registry.addMapping("/user/**")
+                .allowedOrigins("http://localhost:7488", "http://127.0.0.1:7488")
+                .allowedMethods("GET","POST","PUT","DELETE","PATCH","OPTIONS")
+                .allowedHeaders("Authorization","Content-Type","X-Requested-With")
                 .exposedHeaders("Authorization")
                 .allowCredentials(true)
                 .maxAge(3600);
     }
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new AuthInterceptor())
-                .addPathPatterns("/**") // 全局拦截
+        registry.addInterceptor(authInterceptor)
+                .addPathPatterns("/**")
                 .excludePathPatterns(
                         "/user/login",
                         "/user/login-email",

@@ -219,8 +219,6 @@ async function onSubmit() {
   }
 }
 
-
-
 function onForgot() {
   ElMessageBox.alert(
       'Please contact the administrator or go to the password recovery page.',
