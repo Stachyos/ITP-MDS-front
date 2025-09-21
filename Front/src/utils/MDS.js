@@ -39,10 +39,29 @@ axiosInstance.interceptors.request.use(
 
 // === 响应拦截器：处理 401 等 ===
 axiosInstance.interceptors.response.use(
+    // 成功：直接返回 data（保持原有行为）
     (res) => res.data,
+    // 失败分支
     (err) => {
+        const cfg = err?.config || {}
+        const status = err?.response?.status
+
+        // ===== 关键新增：仅超时静默 =====
+        // 客户端超时（Axios 的 code/message）、以及常见服务侧超时状态
+        const isClientTimeout =
+            err?.code === 'ECONNABORTED' ||
+            /timeout of \d+ms exceeded/i.test(err?.message || '') ||
+            /ETIMEDOUT/i.test(err?.code || '')
+        const isServerTimeout = status === 408 || status === 504
+
+        // 若该请求显式要求对“超时”静默，则不弹错误提示，直接把错误交给调用方处理
+        if ((isClientTimeout || isServerTimeout) && cfg.silenceTimeout) {
+            return Promise.reject(err)
+        }
+        // ===== 关键新增结束 =====
+
         if (err.response) {
-            if (err.response.status === 401) {
+            if (status === 401) {
                 ElMessage.warning('请先登录')
                 try {
                     const store = useTokenStore()
@@ -79,6 +98,5 @@ export function setAuthToken(token) {
         delete axiosInstance.defaults.headers.common.Authorization
     }
 }
-
 
 export default axiosInstance

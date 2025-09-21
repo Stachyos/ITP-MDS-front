@@ -63,7 +63,7 @@
                   placeholder="6-digit code"
                   class="code-input"
               />
-              <el-button :disabled="sendDisabled" @click="onSendCode">
+              <el-button :disabled="sendDisabled || sending" @click="onSendCode">
                 {{ sendBtnText }}
               </el-button>
             </div>
@@ -138,12 +138,14 @@ const rules = {
 
 /* ========== code sending countdown ========== */
 const counter = ref(0)
+const sending = ref(false)
 let timer = null
 
 const sendDisabled = computed(() => counter.value > 0)
 const sendBtnText = computed(() => (counter.value > 0 ? `${counter.value}s to resend` : 'Send'))
 
 function startCountdown(sec = 60) {
+  if (timer) clearInterval(timer)
   counter.value = sec
   timer = setInterval(() => {
     counter.value -= 1
@@ -156,22 +158,43 @@ function startCountdown(sec = 60) {
 onBeforeUnmount(() => timer && clearInterval(timer))
 
 async function onSendCode() {
-  if (!form.email || !/.+@.+\..+/.test(form.email)) {
-    ElMessage.warning('Please enter a valid email first')
-    return
-  }
+  // 沿用 el-form 的 email 校验
+  await formRef.value?.validateField('email')
+
+  // 冷却中或正在发送则不处理
+  if (sendDisabled.value || sending.value) return
+
+  // 先进入 60s 冷却，不论请求结果
+  sending.value = true
+  startCountdown(60)
+
   try {
     const r = await apiSendEmailCode({ email: form.email })
-    if (r?.reply) {
-      ElMessage.success(r?.message || 'Verification code sent, please check your inbox')
-      startCountdown(60)
+    // 形状归一化（兼容拦截器已把响应拍扁为 data）
+    const resp = (r && r.data && r.data.reply !== undefined) ? r.data : r
+
+    if (resp?.reply) {
+      ElMessage.success(resp?.message || 'Verification code sent, please check your inbox')
+      // 不再二次 startCountdown，保持一次点击一次冷却
     } else {
-      throw new Error(r?.message || 'Failed to send')
+      // 软提示，不打断冷却
+      ElMessage.warning(resp?.message || 'Sending… please check your inbox shortly')
     }
   } catch (e) {
-    ElMessage.error(e?.message || 'Failed to send, try again later')
+    // 仅对“超时”静默（配合 MDS.js 里的 silenceTimeout）
+    const isTimeout =
+        e?.code === 'ECONNABORTED' ||
+        /timeout of \d+ms exceeded/i.test(e?.message || '') ||
+        /ETIMEDOUT/i.test(e?.code || '')
+    if (!isTimeout) {
+      ElMessage.error(e?.message || 'Failed to send, try again later')
+    }
+    // 超时：保持冷却、静默/轻提示（这里选择静默）
+  } finally {
+    sending.value = false // 按钮仍因倒计时禁用
   }
 }
+
 /* ========== submit login ========== */
 async function onSubmit() {
   try {

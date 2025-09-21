@@ -4,7 +4,9 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.help789.mds.Entity.User;
 import org.help789.mds.Entity.Vo.RegisterReq;
+import org.help789.mds.Service.EmailCodeService;
 import org.help789.mds.Service.JWTservice;
+import org.help789.mds.Service.MailSenderService;
 import org.help789.mds.Service.UserService;
 import org.help789.mds.Utils.pojo.Result;
 import org.help789.mds.repository.UserRepository;
@@ -31,6 +33,11 @@ public class UserServiceImpl implements UserService {
 
     @Resource
     private JWTservice jwtservice;
+
+    @Resource
+    private EmailCodeService emailCodeService;
+    @Resource
+    private MailSenderService mailSenderService;
 
     @Override
     public Result<String> register(RegisterReq req) {
@@ -62,6 +69,54 @@ public class UserServiceImpl implements UserService {
 
         // 3) 返回成功
         return Result.success("registered successfully",user.getRealName());
+    }
+
+    @Override
+    public Result<String> loginByEmail(String email, String code) {
+        // 统一邮箱校验（只允许 qq / foxmail 可选）
+        if (email == null || email.isBlank()
+                || !(email.endsWith("@qq.com") || email.endsWith("@foxmail.com"))) {
+            return Result.failed("仅支持 QQ/Foxmail 邮箱");
+        }
+        if (code == null || code.isBlank()) {
+            return Result.failed("验证码不能为空");
+        }
+
+        boolean ok = emailCodeService.verify(email, code);
+        if (!ok) return Result.failed("验证码或邮箱错误");
+
+        // 查或建用户（注意你的表结构字段 NOT NULL）
+        var opt = userRepository.findByEmail(email);
+        User user = opt.orElseGet(() -> {
+            // account/realName/passwordHash 均为 NOT NULL，给默认值
+            String account = email.split("@")[0];
+            String randomPwd = java.util.UUID.randomUUID().toString(); // 占位
+            String hash = passwordEncoder.encode(randomPwd);
+
+            User u = User.builder()
+                    .realName(account)
+                    .account(account)
+                    .passwordHash(hash)
+                    .email(email)
+                    .role("user")
+                    .build();
+            return userRepository.save(u);
+        });
+
+        // 生成 JWT
+        try {
+            Map<String, Object> claims = Map.of(
+                    "userId", user.getId(),
+                    "account", user.getAccount(),
+                    "role", user.getRole(),
+                    "realName", user.getRealName(),
+                    "email", user.getEmail()
+            );
+            String token = jwtservice.getJWTToken(claims);
+            return Result.success("登录成功", token);
+        } catch (Exception e) {
+            return Result.failed("签发令牌失败");
+        }
     }
 
     @Override
@@ -102,12 +157,6 @@ public class UserServiceImpl implements UserService {
 
         // 5) 如需记录登录态/审计日志，可在此处处理
         return Result.success("登录成功", token);
-    }
-
-
-    @Override
-    public Result<String> loginByEmail(String email) {
-        return null;
     }
 
 
