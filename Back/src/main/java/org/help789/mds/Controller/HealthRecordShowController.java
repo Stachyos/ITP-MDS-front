@@ -12,7 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
-@RequestMapping("/HealthRecordShow")
+@RequestMapping("/api/HealthRecordShow")
 @RequiredArgsConstructor
 public class HealthRecordShowController {
 

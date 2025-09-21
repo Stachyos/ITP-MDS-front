@@ -6,6 +6,8 @@ const routes = [
     { path: '/login', component: Login },
     { path: '/register', component: () => import('@/views/Register.vue') }, // ← 已添加
     { path: '/visual', component: () => import('@/views/visual.vue') },
+    { path: '/HealthRecordShow', component: () => import('@/views/HealthRecordShow.vue') },
+
 
     // 示例：登录后首页
     // { path: '/home', component: () => import('@/views/Home.vue') },
@@ -20,7 +22,7 @@ const router = createRouter({
 
 
 router.beforeEach((to, _from, next) => {
-    const publicPages = ['/login', '/register','/visual']
+    const publicPages = ['/login', '/register']
     const authed =
         localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token')
     if (!authed && !publicPages.includes(to.path)) return next('/login')

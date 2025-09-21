@@ -71,7 +71,7 @@ const avatarUrl = ref('https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726
 
 // 菜单和路由的映射关系
 const menuRoutes = {
-  '1': '/homeTable',
+  '1': '/HealthRecordShow',
   '2-1': '/analysis',
   '2-2': '/display',
   '3': '/permissionManagement'

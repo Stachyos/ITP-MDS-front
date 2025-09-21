@@ -2,13 +2,13 @@ import request from '@/utils/MDS.js'
 
 // 获取全部
 export function getAllHealthRecords() {
-    return request.get(`/HealthRecordShow/getAll`)
+    return request.get(`/api/HealthRecordShow/getAll`)
 }
 
 // 新增
 export function createHealthRecord(data) {
     return request.post(
-        `/HealthRecordShow/create`,
+        `/api/HealthRecordShow/create`,
         JSON.stringify(data),
         { headers: { 'Content-Type': 'application/json' } }
     )
@@ -17,7 +17,7 @@ export function createHealthRecord(data) {
 // 更新
 export function updateHealthRecord(id, data) {
     return request.put(
-        `/HealthRecordShow/update/${id}`,
+        `/api/HealthRecordShow/update/${id}`,
         JSON.stringify(data),
         { headers: { 'Content-Type': 'application/json' } }
     )
@@ -25,7 +25,7 @@ export function updateHealthRecord(id, data) {
 
 // 删除
 export function deleteHealthRecord(id) {
-    return request.delete(`/HealthRecordShow/delete/${id}`)
+    return request.delete(`/api/HealthRecordShow/delete/${id}`)
 }
 
 // 导出excel
