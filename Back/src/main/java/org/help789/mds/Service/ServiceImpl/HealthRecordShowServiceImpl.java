@@ -8,7 +8,6 @@ import org.help789.mds.repository.HealthRecordRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,8 +29,7 @@ public class HealthRecordShowServiceImpl implements HealthRecordShowService {
     @Override
     public HealthRecordShowVo create(HealthRecordShowVo vo) {
         HealthRecord entity = vo2Entity(vo);
-        // 由数据库自增
-        entity.setRecordId(null);
+        entity.setRecordId(null); // 由数据库自增
         HealthRecord saved = repository.save(entity);
         return entity2Vo(saved);
     }
@@ -42,9 +40,8 @@ public class HealthRecordShowServiceImpl implements HealthRecordShowService {
         HealthRecord exist = repository.findById(recordId)
                 .orElseThrow(() -> new IllegalArgumentException("Record not found: " + recordId));
 
-        // 将 vo 覆盖到已存在实体上（保留ID）
         HealthRecord patch = vo2Entity(vo);
-        patch.setRecordId(exist.getRecordId());
+        patch.setRecordId(exist.getRecordId()); // 保留ID
         HealthRecord saved = repository.save(patch);
         return entity2Vo(saved);
     }
@@ -63,19 +60,19 @@ public class HealthRecordShowServiceImpl implements HealthRecordShowService {
         HealthRecordShowVo vo = new HealthRecordShowVo();
         vo.setRecordId(entity.getRecordId());
         vo.setName(entity.getName());
-        vo.setSex(entity.getSex() == null ? null : entity.getSex().name());
-        vo.setAge(entity.getAge());
 
+        // sex: 1=男，其余=女（含null）
+        vo.setSex(sexIntToStr(entity.getSex()));
+
+        vo.setAge(entity.getAge());
         vo.setHdlC(entity.getHdlC());
         vo.setLdlC(entity.getLdlC());
         vo.setVldlC(entity.getVldlC());
         vo.setTriglyceride(entity.getTriglyceride());
         vo.setTotalCholesterol(entity.getTotalCholesterol());
-
         vo.setPulse(entity.getPulse());
         vo.setDiastolicBp(entity.getDiastolicBp());
         vo.setHypertensionHistory(entity.getHypertensionHistory());
-
         vo.setBun(entity.getBun());
         vo.setUricAcid(entity.getUricAcid());
         vo.setCreatinine(entity.getCreatinine());
@@ -87,40 +84,38 @@ public class HealthRecordShowServiceImpl implements HealthRecordShowService {
         HealthRecord entity = new HealthRecord();
         entity.setRecordId(vo.getRecordId());
         entity.setName(vo.getName());
-        entity.setSex(parseSex(vo.getSex()));
-        entity.setAge(vo.getAge());
 
+        // sex: 支持 "男/女"、"1/0"、"male/female"、"m/f"（默认 0=女）
+        entity.setSex(parseSexToInt(vo.getSex()));
+
+        entity.setAge(vo.getAge());
         entity.setHdlC(vo.getHdlC());
         entity.setLdlC(vo.getLdlC());
         entity.setVldlC(vo.getVldlC());
         entity.setTriglyceride(vo.getTriglyceride());
         entity.setTotalCholesterol(vo.getTotalCholesterol());
-
         entity.setPulse(vo.getPulse());
         entity.setDiastolicBp(vo.getDiastolicBp());
         entity.setHypertensionHistory(Boolean.TRUE.equals(vo.getHypertensionHistory()));
-
         entity.setBun(vo.getBun());
         entity.setUricAcid(vo.getUricAcid());
         entity.setCreatinine(vo.getCreatinine());
         return entity;
     }
 
-    private HealthRecord.Sex parseSex(String sexStr) {
-        if (sexStr == null) return HealthRecord.Sex.未知;
-        String s = sexStr.trim();
-        // 兼容中英文 & 大小写
-        if (equalsAnyIgnoreCase(s, "男", "male", "m")) return HealthRecord.Sex.男;
-        if (equalsAnyIgnoreCase(s, "女", "female", "f")) return HealthRecord.Sex.女;
-        if (equalsAnyIgnoreCase(s, "其他", "other")) return HealthRecord.Sex.其他;
-        if (equalsAnyIgnoreCase(s, "未知", "unknown", "unk")) return HealthRecord.Sex.未知;
-        // 回退：尝试按枚举名解析；再不行就未知
-        try { return HealthRecord.Sex.valueOf(s); }
-        catch (Exception ignore) { return HealthRecord.Sex.未知; }
+    // ================== 性别映射辅助 ==================
+
+    /** Entity: 1=男，其余=女 */
+    private String sexIntToStr(Integer sex) {
+        return (sex != null && sex == 1) ? "男" : "女";
     }
 
-    private boolean equalsAnyIgnoreCase(String a, String... arr) {
-        for (String b : arr) if (Objects.equals(a.toLowerCase(), b.toLowerCase())) return true;
-        return false;
+    /** VO -> Entity: "男/1/male/m" = 1；其他=0 */
+    private Integer parseSexToInt(String sexStr) {
+        if (sexStr == null) return 0;
+        String s = sexStr.trim().toLowerCase();
+        if ("1".equals(s) || "男".equals(sexStr) || "male".equals(s) || "m".equals(s)) return 1;
+        // 其余（"0"、"女"、"female"、"f"、"其他"、"未知"等）都按 0 处理
+        return 0;
     }
 }
