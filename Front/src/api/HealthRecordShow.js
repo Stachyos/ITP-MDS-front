@@ -27,3 +27,10 @@ export function updateHealthRecord(id, data) {
 export function deleteHealthRecord(id) {
     return request.delete(`/HealthRecordShow/delete/${id}`)
 }
+
+// 导出excel
+export function downloadHealthRecordTemplate() {
+    return request
+        .get('/HealthRecordShow/downloadTemplate', { responseType: 'blob' })
+        .then(res => res.data ?? res)  // 统一成 Blob
+}
