@@ -46,9 +46,6 @@ public class Permission {
     private Boolean moduleReportGeneration = false;
 
     // —— 操作类型 ——
-    @Column(name = "op_view", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
-    @Builder.Default
-    private Boolean opView = false;
 
     @Column(name = "op_edit", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
     @Builder.Default

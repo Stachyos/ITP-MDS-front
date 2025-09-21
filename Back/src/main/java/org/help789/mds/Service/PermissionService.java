@@ -1,4 +1,4 @@
 package org.help789.mds.Service;
 
-public class PermissionService {
+public interface PermissionService {
 }
