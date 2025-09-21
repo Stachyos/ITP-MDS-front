@@ -34,3 +34,15 @@ export function downloadHealthRecordTemplate() {
         .get('/HealthRecordShow/downloadTemplate', { responseType: 'blob' })
         .then(res => res.data ?? res)  // 统一成 Blob
 }
+
+// 导入数据（CSV/Excel/JSON）
+export function importHealthRecords(file, format) {
+    const form = new FormData()
+    form.append('file', file)
+    const url = format ? `/HealthRecordShow/import?format=${format}` : `/HealthRecordShow/import`
+    return request.post(url, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120000,                // ← 单接口加长
+        onUploadProgress: e => {/* 可选：显示进度 */}
+    })
+}
