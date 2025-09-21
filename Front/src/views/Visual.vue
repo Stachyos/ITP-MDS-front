@@ -4,17 +4,17 @@
 
     <div class="header">
       <div class="title">
-        <div class="h1">统计分析（全量图表）</div>
-        <div class="subtitle">全局性别/年龄筛选 + 每图表独立切换饼图/柱状图</div>
+        <div class="h1">All Charts Visualization（全量图表）</div>
+        <div class="subtitle">Global Filters by Gender/Age + Switch Pie/Bar Chart for Each（全局性别/年龄筛选 + 每图表独立切换饼图/柱状图）</div>
       </div>
 
-      <!-- 顶部右侧：全局筛选 + 刷新 -->
+      <!-- Top right: Global filters + Refresh -->
       <div class="ops">
         <el-select
             v-model="globalSex"
             size="large"
             class="ctrl"
-            placeholder="性别"
+            placeholder="Gender（性别）"
             @change="renderAll"
         >
           <el-option v-for="s in sexOptions" :key="s" :label="s" :value="s" />
@@ -24,13 +24,13 @@
             v-model="globalAgeBucket"
             size="large"
             class="ctrl"
-            placeholder="年龄区间"
+            placeholder="Age Range（年龄区间）"
             @change="renderAll"
         >
           <el-option v-for="ab in ageBucketOptions" :key="ab" :label="ab" :value="ab" />
         </el-select>
 
-        <el-button :loading="loading" @click="reload">刷新</el-button>
+        <el-button :loading="loading" @click="reload">Refresh（刷新）</el-button>
       </div>
     </div>
 
@@ -46,7 +46,7 @@
           >
             <div class="card-header">
               <div class="card-title">{{ metricLabel(mKey) }}</div>
-              <!-- 每个图自己的饼/柱切换按钮 -->
+              <!-- Each chart has its own pie/bar toggle button -->
               <div class="card-controls">
                 <el-button
                     size="small"
@@ -54,7 +54,7 @@
                     plain
                     @click="toggleChartTypeFor(chartId(ci, String(mKey)))"
                 >
-                  {{ getChartType(chartId(ci, String(mKey))) === 'pie' ? '切换为柱状图' : '切回饼图' }}
+                  {{ getChartType(chartId(ci, String(mKey))) === 'pie' ? 'Switch to Bar Chart（切换为柱状图）' : 'Switch to Pie Chart（切回饼图）' }}
                 </el-button>
               </div>
             </div>
@@ -71,10 +71,10 @@
 </template>
 
 <script>
-// 手动管理 echarts 实例
+// Manually manage echarts instances
 import * as echarts from 'echarts'
 import { ElMessage } from 'element-plus'
-import { getAllHealthRecords } from '@/api/HealthRecordShow.js' // 若报错可改为 '@/api/HealthRecordShow'
+import { getAllHealthRecords } from '@/api/HealthRecordShow.js' // If error, change to '@/api/HealthRecordShow'
 import Header from '@/components/Header.vue'
 
 export default {
@@ -87,50 +87,50 @@ export default {
       loading: false,
       raw: [],
 
-      // 全局筛选
-      globalSex: '全部',
-      globalAgeBucket: '全部',
+      // Global filters
+      globalSex: '全部 (All)',
+      globalAgeBucket: '全部 (All)',
 
-      // 指标定义（数值型给出分箱）
+      // Metric definitions (numeric with buckets)
       metrics: [
-        { key: 'totalCholesterol', label: '总胆固醇', kind: 'number', buckets: [3,4,5,6,7,8] },
-        { key: 'triglyceride',     label: '甘油三酯', kind: 'number', buckets: [0.8,1.7,2.3,5.6] },
-        { key: 'hdlC',             label: '高密度脂蛋白', kind: 'number', buckets: [0.8,1.0,1.3,1.6] },
-        { key: 'ldlC',             label: '低密度脂蛋白', kind: 'number', buckets: [1.8,2.6,3.4,4.1] },
-        { key: 'vldlC',            label: '极低密度脂蛋白', kind: 'number', buckets: [0.2,0.4,0.8] },
-        { key: 'pulse',            label: '脉搏(次/分)', kind: 'number', buckets: [60,80,100,120] },
-        { key: 'diastolicBp',      label: '舒张压(mmHg)', kind: 'number', buckets: [60,80,90,100] },
-        { key: 'bun',              label: '尿素氮', kind: 'number', buckets: [3,7,9] },
-        { key: 'uricAcid',         label: '尿酸', kind: 'number', buckets: [240,360,420,480] },
-        { key: 'creatinine',       label: '肌酐', kind: 'number', buckets: [60,97,133,186] },
-        { key: 'age',              label: '年龄(岁)', kind: 'number', buckets: [18,30,40,50,60,70,80] },
-        { key: 'sex',              label: '性别', kind: 'enum' },
-        { key: 'hypertensionHistory', label: '高血压史', kind: 'bool' },
+        { key: 'totalCholesterol', label: '总胆固醇 (Total Cholesterol)', kind: 'number', buckets: [3,4,5,6,7,8] },
+        { key: 'triglyceride',     label: '甘油三酯 (Triglyceride)', kind: 'number', buckets: [0.8,1.7,2.3,5.6] },
+        { key: 'hdlC',             label: '高密度脂蛋白 (HDL-C)', kind: 'number', buckets: [0.8,1.0,1.3,1.6] },
+        { key: 'ldlC',             label: '低密度脂蛋白 (LDL-C)', kind: 'number', buckets: [1.8,2.6,3.4,4.1] },
+        { key: 'vldlC',            label: '极低密度脂蛋白 (VLDL-C)', kind: 'number', buckets: [0.2,0.4,0.8] },
+        { key: 'pulse',            label: '脉搏 (Pulse)', kind: 'number', buckets: [60,80,100,120] },
+        { key: 'diastolicBp',      label: '舒张压 (Diastolic BP)', kind: 'number', buckets: [60,80,90,100] },
+        { key: 'bun',              label: '尿素氮 (BUN)', kind: 'number', buckets: [3,7,9] },
+        { key: 'uricAcid',         label: '尿酸 (Uric Acid)', kind: 'number', buckets: [240,360,420,480] },
+        { key: 'creatinine',       label: '肌酐 (Creatinine)', kind: 'number', buckets: [60,97,133,186] },
+        { key: 'age',              label: '年龄 (Age)', kind: 'number', buckets: [18,30,40,50,60,70,80] },
+        { key: 'sex',              label: '性别 (Sex)', kind: 'enum' },
+        { key: 'hypertensionHistory', label: '高血压史 (Hypertension History)', kind: 'bool' },
       ],
 
-      // 三大类：一次性全部展示
+      // Three major categories: Display all at once
       categoriesList: [
-        { key: 'demographic',  label: '基本信息',         metrics: ['sex', 'hypertensionHistory', 'age'] },
-        { key: 'lipid',        label: '血脂相关',         metrics: ['totalCholesterol','triglyceride','hdlC','ldlC','vldlC'] },
-        { key: 'renal_vitals', label: '生命体征 / 肾功能', metrics: ['pulse','diastolicBp','bun','uricAcid','creatinine'] },
+        { key: 'demographic',  label: '基本信息 (Demographics)',         metrics: ['sex', 'hypertensionHistory', 'age'] },
+        { key: 'lipid',        label: '血脂相关 (Lipid Related)',         metrics: ['totalCholesterol','triglyceride','hdlC','ldlC','vldlC'] },
+        { key: 'renal_vitals', label: '生命体征 / 肾功能 (Vitals / Renal Function)', metrics: ['pulse','diastolicBp','bun','uricAcid','creatinine'] },
       ],
 
-      // DOM 与 ECharts 实例缓存
+      // DOM and ECharts instance cache
       elMap: Object.create(null),    // { id: HTMLDivElement }
       chartMap: Object.create(null), // { id: EChartsInstance }
 
-      // 每图的类型：pie/bar
+      // Each chart's type: pie/bar
       chartTypeMap: Object.create(null), // { id: 'pie' | 'bar' }
 
-      // 维度选项
-      sexOptions: ['全部', '男', '女', '其他', '未知'],
+      // Dimension options
+      sexOptions: ['全部 (All)', '男 (Male)', '女 (Female)', '其他 (Other)', '未知 (Unknown)'],
     }
   },
 
   computed: {
     ageBucketOptions() {
       const labels = this.bucketLabels([18,30,40,50,60,70,80])
-      return ['全部', ...labels]
+      return ['全部 (All)', ...labels]
     }
   },
 
@@ -146,7 +146,7 @@ export default {
   },
 
   methods: {
-    // --- 公共 ---
+    // --- Common ---
     chartId(catIndex, metricKey) {
       return `c${catIndex}-${metricKey}`
     },
@@ -155,7 +155,7 @@ export default {
       const id = this.chartId(catIndex, metricKey)
       if (el) {
         this.elMap[id] = el
-        // 初始化图表类型（默认饼图）
+        // Initialize chart type (default pie chart)
         if (!this.chartTypeMap[id]) this.chartTypeMap[id] = 'pie'
       } else {
         this.disposeOne(id)
@@ -170,7 +170,7 @@ export default {
         const data = Array.isArray(res?.data) ? res.data : (res?.data?.data ?? [])
         this.raw = data || []
       } catch (e) {
-        ElMessage.error(e?.message || '加载失败')
+        ElMessage.error(e?.message || 'Load failed（加载失败）')
         this.raw = []
       } finally {
         this.loading = false
@@ -182,18 +182,18 @@ export default {
       this.$nextTick(() => this.renderAll())
     },
 
-    // --- 图类型（每图独立）---
+    // --- Chart type (independent for each chart) ---
     getChartType(id) {
       return this.chartTypeMap[id] || 'pie'
     },
     toggleChartTypeFor(id) {
       this.chartTypeMap[id] = this.getChartType(id) === 'pie' ? 'bar' : 'pie'
-      // 只重绘这个图
+      // Re-render only this chart
       const [ci, metricKey] = id.replace(/^c/, '').split('-') // "c{ci}-{metric}"
       this.renderOne(Number(ci), metricKey)
     },
 
-    // --- 工具 ---
+    // --- Utility ---
     metricDef(key) {
       return this.metrics.find(m => m.key === key)
     },
@@ -202,7 +202,7 @@ export default {
       return m?.label || key
     },
     bucketize(val, cuts) {
-      if (val == null || Number.isNaN(val)) return '未知'
+      if (val == null || Number.isNaN(val)) return '未知 (Unknown)'
       for (let i = 0; i < cuts.length; i++) {
         if (val < cuts[i]) {
           const left = i === 0 ? '-∞' : String(cuts[i-1])
@@ -223,40 +223,40 @@ export default {
       return labels
     },
     ageBucket(n) {
-      if (n == null) return '未知'
+      if (n == null) return '未知 (Unknown)'
       const cuts = [18,30,40,50,60,70,80]
       return this.bucketize(n, cuts)
     },
 
-    // 应用全局筛选
+    // Apply global filters
     applyGlobalFilters(records) {
       let arr = records || []
-      if (this.globalSex && this.globalSex !== '全部') {
-        arr = arr.filter(r => (r?.sex ?? '未知') === this.globalSex)
+      if (this.globalSex && this.globalSex !== '全部 (All)') {
+        arr = arr.filter(r => (r?.sex ?? '未知 (Unknown)') === this.globalSex)
       }
-      if (this.globalAgeBucket && this.globalAgeBucket !== '全部') {
+      if (this.globalAgeBucket && this.globalAgeBucket !== '全部 (All)') {
         arr = arr.filter(r => this.ageBucket(r?.age ?? null) === this.globalAgeBucket)
       }
       return arr
     },
 
-    // 统一统计：返回 [{name, value}]
+    // Uniform statistics: return [{name, value}]
     makeItems(metricKey, filtered) {
       const m = this.metricDef(metricKey)
-      if (!m) return [{ name: '暂无数据', value: 1 }]
+      if (!m) return [{ name: '暂无数据 (No data)', value: 1 }]
       const counter = new Map()
 
       for (const r of filtered) {
         const v = r[m.key]
-        let name = '未知'
+        let name = '未知 (Unknown)'
         if (m.kind === 'number' && m.buckets) {
-          name = typeof v === 'number' ? this.bucketize(v, m.buckets) : '未知'
+          name = typeof v === 'number' ? this.bucketize(v, m.buckets) : '未知 (Unknown)'
         } else if (m.kind === 'enum') {
-          name = String(v ?? '未知')
+          name = String(v ?? '未知 (Unknown)')
         } else if (m.kind === 'bool') {
-          name = v ? '是' : '否'
+          name = v ? '是 (Yes)' : '否 (No)'
         } else {
-          name = String(v ?? '未知')
+          name = String(v ?? '未知 (Unknown)')
         }
         counter.set(name, (counter.get(name) || 0) + 1)
       }
@@ -264,20 +264,20 @@ export default {
       return Array.from(counter.entries()).map(([name, value]) => ({ name, value }))
     },
 
-    // --- 渲染 ---
+    // --- Rendering ---
     renderOne(catIndex, metricKey) {
       const id = this.chartId(catIndex, metricKey)
       const el = this.elMap[id]
       if (!el) return
 
-      // 清理旧实例
+      // Clear old instances
       this.disposeOne(id)
       const chart = echarts.init(el)
       this.chartMap[id] = chart
 
       const filtered = this.applyGlobalFilters(this.raw)
       const titleText = this.metricLabel(metricKey)
-      const items = filtered.length ? this.makeItems(metricKey, filtered) : [{ name: '暂无数据', value: 1 }]
+      const items = filtered.length ? this.makeItems(metricKey, filtered) : [{ name: '暂无数据 (No data)', value: 1 }]
       const chartType = this.getChartType(id)
 
       const legendCommon = {
@@ -319,7 +319,7 @@ export default {
           legend: { ...legendCommon, data: [titleText], textStyle: { color: '#374151' } },
           grid: { left: 50, right: 120, top: 60, bottom: 60, containLabel: true },
           xAxis: { type: 'category', data: categories, axisLabel: { interval: 0, rotate: 20, color: '#374151' }, axisLine: { lineStyle: { color: '#E5E7EB' } } },
-          yAxis: { type: 'value', name: '数量', axisLabel: { color: '#374151' }, splitLine: { lineStyle: { color: '#F3F4F6' } }, axisLine: { lineStyle: { color: '#E5E7EB' } } },
+          yAxis: { type: 'value', name: '数量 (Count)', axisLabel: { color: '#374151' }, splitLine: { lineStyle: { color: '#F3F4F6' } }, axisLine: { lineStyle: { color: '#E5E7EB' } } },
           series: [{
             name: titleText,
             type: 'bar',
@@ -366,20 +366,19 @@ export default {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  /* 浅色背景 */
   background: #ffffff;
-  color: #111827;              /* 灰黑文字 */
+  color: #111827;              /* Gray text */
   padding: 16px 20px 20px;
   box-sizing: border-box;
 }
 
-/* 顶部 */
+/* Top */
 .header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   margin-bottom: 14px;
-  border-bottom: 1px solid #E5E7EB; /* 浅灰分割线 */
+  border-bottom: 1px solid #E5E7EB; /* Light gray line */
   padding-bottom: 10px;
 }
 .title .h1 { font-size: 26px; font-weight: 800; color: #0f172a; }
@@ -387,7 +386,7 @@ export default {
 .ops { display: flex; gap: 12px; align-items: center; }
 .ctrl { width: 160px; }
 
-/* 容器 */
+/* Container */
 .groups {
   flex: 1;
   min-height: 0;
@@ -397,7 +396,7 @@ export default {
   gap: 22px;
 }
 
-/* 组标题 */
+/* Group Title */
 .group-title {
   font-size: 16px;
   font-weight: 700;
@@ -405,7 +404,7 @@ export default {
   color: #111827;
 }
 
-/* 卡片：白底 + 阴影 + 浅灰边框；两列更大 */
+/* Cards: White background + Shadow + Light gray border; Two-column larger layout */
 .cards {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -423,7 +422,7 @@ export default {
   box-shadow: 0 1px 2px rgba(16,24,40,0.06), 0 1px 3px rgba(16,24,40,0.10);
 }
 
-/* 卡片头：左标题、右“切换图形”按钮 */
+/* Card Header */
 .card-header {
   display: flex;
   align-items: center;
@@ -438,13 +437,10 @@ export default {
 }
 .card-controls { display: flex; gap: 8px; align-items: center; }
 
-/* 图表容器 */
-.chart {
-  flex: 1;
-  min-height: 300px;
-}
+/* Chart Container */
+.chart { flex: 1; min-height: 300px; }
 
-/* 小屏：单列 */
+/* Small screen: single column */
 @media (max-width: 1200px) {
   .cards { grid-template-columns: 1fr; }
 }
