@@ -10,7 +10,7 @@ const URL = ENVIRONMENT.PROD ? ENVI_PROD_SERVER_ADDRESS : ENVI_DEV_SERVER_ADDRES
 
 const axiosInstance = axios.create({
     baseURL: URL,
-    timeout: 3000,
+    timeout: 60000,
     headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }
 })
 

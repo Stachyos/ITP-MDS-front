@@ -4,15 +4,18 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.help789.mds.Entity.Vo.HealthRecordShowVo;
 import org.help789.mds.Service.HealthRecordShowService;
+import org.help789.mds.Utils.pojo.ImportResult;
 import org.help789.mds.Utils.pojo.Result;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
-@RequestMapping("/HealthRecordShow")
+@RequestMapping("/api/HealthRecordShow")
 @RequiredArgsConstructor
 public class HealthRecordShowController {
 
@@ -86,6 +89,22 @@ public class HealthRecordShowController {
         } catch (Exception e) {
             // 如果需要返回 JSON 错误，可以在这里重置响应并写入 Result，但下载场景通常直接抛错即可。
             throw new RuntimeException("模板下载失败", e);
+        }
+    }
+
+    /**
+     * 批量导入：支持 CSV / Excel / JSON
+     * 例：POST /api/HealthRecordShow/import?format=excel
+     * form-data: file=<上传文件>
+     */
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Result<ImportResult> importData(@RequestPart("file") MultipartFile file,
+                                           @RequestParam(value = "format", required = false) String format) {
+        try {
+            ImportResult result = healthRecordService.importData(file, format);
+            return Result.success("导入成功", result);
+        } catch (Exception e) {
+            return Result.failed("导入失败：" + e.getMessage());
         }
     }
 }

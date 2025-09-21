@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Login from '@/views/Login.vue'
 import HealthRecordShow from '@/views/HealthRecordShow.vue'
 import Analysis from '@/views/AnalysisPage.vue'
-import DisplayPage from "@/views/DisplayPage.vue";
+import Visual from "@/views/Visual.vue";
 import PermissionManagement from "@/views/PermissionManagementPage.vue";
 
 const routes = [
@@ -15,7 +15,7 @@ const routes = [
     // 404
     { path: '/:pathMatch(.*)*', redirect: '/login' },
     { path: '/analysis', component: Analysis},
-    { path: '/display', component: DisplayPage},
+    { path: '/visual', component: Visual},
     { path: '/permissionManagement', component: PermissionManagement}
 
 ]

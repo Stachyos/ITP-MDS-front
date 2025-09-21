@@ -23,16 +23,6 @@ spring:
       hibernate.format_sql: true
       hibernate.jdbc.time_zone: Asia/Shanghai
       hibernate.dialect: org.hibernate.dialect.MySQLDialect
-  mail:
-    host: smtp.qq.com
-    port: 465
-    username: MDSZZJ@qq.com
-    password: cfezerehzdcjdijf
-    properties:
-      mail:
-        smtp:
-          ssl:
-            enable: true
 
 mds:
   user:
