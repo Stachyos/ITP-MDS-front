@@ -19,7 +19,7 @@ import java.util.Set;
 public class AuthInterceptor implements HandlerInterceptor {
 
     private static final Set<String> WHITELIST = Set.of(
-            "/user/login", "/user/login-email", "/user/send-email-code", "/user/register",
+            "/api/user/login", "/api/user/login-email", "/api/user/send-email-code", "/api/user/register",
             "/error", "/v3/api-docs", "/swagger-ui", "/swagger-ui.html"
     );
 

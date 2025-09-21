@@ -14,24 +14,24 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/user/**")
-                .allowedOrigins("http://localhost:7488", "http://127.0.0.1:7488")
+        registry.addMapping("/**") // 覆盖所有接口，包括 /user/**、/api/** 等
+                // Spring Boot 3 搭配 allowCredentials(true) 时，建议用 allowedOriginPatterns
+                .allowedOriginPatterns("http://localhost:7488", "http://127.0.0.1:7488")
                 .allowedMethods("GET","POST","PUT","DELETE","PATCH","OPTIONS")
-                .allowedHeaders("Authorization","Content-Type","X-Requested-With")
+                .allowedHeaders("*")
                 .exposedHeaders("Authorization")
                 .allowCredentials(true)
                 .maxAge(3600);
     }
-
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns(
-                        "/user/login",
-                        "/user/login-email",
-                        "/user/send-email-code",
-                        "/user/register",
+                        "/api/user/login",
+                        "/api/user/login-email",
+                        "/api/user/send-email-code",
+                        "/api/user/register",
                         "/error",
                         "/actuator/**",
                         "/v3/api-docs/**",
