@@ -1,4 +1,4 @@
-package org.help789.mds.service.impl;
+package org.help789.mds.Service.ServiceImpl;
 
 import org.help789.mds.Entity.Permission;
 import org.help789.mds.Entity.User;
