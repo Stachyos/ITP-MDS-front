@@ -10,6 +10,7 @@ import org.help789.mds.Service.EmailCodeService;
 import org.help789.mds.Service.MailSenderService;
 import org.help789.mds.Service.UserService;
 import org.help789.mds.Utils.pojo.Result;
+import org.help789.mds.repository.UserRepository;
 import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +26,8 @@ public class UserController {
     private EmailCodeService emailCodeService;
     @Resource
     private MailSenderService mailSenderService;
-
+    @Resource
+    private UserRepository userRepository;
 
     // 账号密码登录（form-urlencoded）
     @PostMapping(
@@ -49,14 +51,19 @@ public class UserController {
     )
     public Result<Void> sendCodeForm(@RequestParam @Email String email, HttpServletRequest req) {
         if (!email.endsWith("@qq.com") && !email.endsWith("@foxmail.com")) {
-            return Result.failed("仅支持 QQ/Foxmail 邮箱"); // 泛型会推断为 Void
+            return Result.failed("仅支持 QQ/Foxmail 邮箱");
         }
+        System.out.println(email);
+        if (!userRepository.existsByEmail(email)) {
+            System.out.println("buzhidao");
+            return Result.failed("邮箱未注册");
+        }
+        System.out.println("buzhidasdasd");
         String ip = realIp(req);
         try {
             emailCodeService.checkRateLimit(email, ip);
             String code = emailCodeService.generateAndStore(email);
             mailSenderService.sendLoginCode(email, code);
-            // 关键：第二个参数传 null，使其成为 Result<Void>
             return Result.success("验证码已发送", (Void) null);
         } catch (IllegalStateException tooMany) {
             return Result.failed(tooMany.getMessage());
@@ -64,6 +71,7 @@ public class UserController {
             return Result.failed("发送失败，请稍后再试");
         }
     }
+
 
 
     @PostMapping(
