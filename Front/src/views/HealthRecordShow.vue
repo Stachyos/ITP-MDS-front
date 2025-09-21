@@ -5,10 +5,6 @@
     <div class="main-content">
       <div class="content-header">
         <h2 class="page-title">数据管理（Data Table）</h2>
-<!--        <el-breadcrumb separator="/">-->
-<!--          <el-breadcrumb-item :to="{ path: '/homeTable' }">首页</el-breadcrumb-item>-->
-<!--          <el-breadcrumb-item>健康数据管理</el-breadcrumb-item>-->
-<!--        </el-breadcrumb>-->
       </div>
 
       <div class="table-container">
@@ -17,12 +13,13 @@
           <div class="title">健康数据记录</div>
           <div class="ops">
             <el-input v-model="keyword" placeholder="筛选关键词（按姓名）" clearable style="width: 220px" />
-            <el-button type="primary" @click="openCreate" :loading="loading">新建</el-button>
             <el-button @click="fetchList" :loading="loading">刷新</el-button>
+            <el-button @click="downloadTemplate" :loading="downloading">下载模板</el-button>
+            <el-button type="primary" @click="openCreate" :loading="loading">新建</el-button>
           </div>
         </div>
 
-        <!-- 数据表 -->
+        <!-- 数据表（直接展示主要字段） -->
         <el-table
             v-loading="loading"
             :data="filteredList"
@@ -31,42 +28,37 @@
             highlight-current-row
         >
           <el-table-column prop="recordId" label="ID" width="120" />
-          <el-table-column prop="name" label="名称/标签" min-width="180" />
-          <el-table-column prop="sex" label="性别" width="90" />
-          <el-table-column prop="age" label="年龄" width="90" />
-          <el-table-column prop="totalCholesterol" label="总胆固醇" width="120" />
-          <el-table-column prop="triglyceride" label="甘油三酯" width="120" />
-          <el-table-column label="操作" width="220" fixed="right">
+          <el-table-column prop="name" label="名称/标签" min-width="160" />
+          <el-table-column prop="sex" label="性别" width="80" />
+          <el-table-column prop="age" label="年龄" width="80" />
+
+          <el-table-column prop="totalCholesterol" label="总胆固醇" width="110" />
+          <el-table-column prop="triglyceride" label="甘油三酯" width="110" />
+          <el-table-column prop="hdlC" label="HDL-C" width="100" />
+          <el-table-column prop="ldlC" label="LDL-C" width="100" />
+          <el-table-column prop="vldlC" label="VLDL-C" width="110" />
+
+          <el-table-column prop="pulse" label="脉搏" width="90" />
+          <el-table-column prop="diastolicBp" label="舒张压" width="90" />
+          <el-table-column label="高血压史" width="100">
             <template #default="{ row }">
-              <el-button size="small" @click.stop="openView(row)">查看</el-button>
+              {{ row.hypertensionHistory ? '是' : '否' }}
+            </template>
+          </el-table-column>
+
+          <el-table-column prop="bun" label="尿素氮" width="100" />
+          <el-table-column prop="uricAcid" label="尿酸" width="100" />
+          <el-table-column prop="creatinine" label="肌酐" width="100" />
+
+          <el-table-column label="操作" width="180" fixed="right">
+            <template #default="{ row }">
               <el-button size="small" type="primary" plain @click.stop="openEdit(row)">编辑</el-button>
-              <el-button size="small" type="danger" plain @click.stop="deleteRow(row)">删除</el-button>
+              <el-button size="small" type="danger"  plain @click.stop="deleteRow(row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
       </div>
     </div>
-
-    <!-- 查看抽屉 -->
-    <el-drawer v-model="viewVisible" title="查看记录" size="520px">
-      <el-descriptions :column="2" border>
-        <el-descriptions-item label="ID">{{ viewData.recordId }}</el-descriptions-item>
-        <el-descriptions-item label="姓名">{{ viewData.name }}</el-descriptions-item>
-        <el-descriptions-item label="性别">{{ viewData.sex }}</el-descriptions-item>
-        <el-descriptions-item label="年龄">{{ viewData.age ?? '—' }}</el-descriptions-item>
-        <el-descriptions-item label="总胆固醇">{{ viewData.totalCholesterol ?? '—' }}</el-descriptions-item>
-        <el-descriptions-item label="甘油三酯">{{ viewData.triglyceride ?? '—' }}</el-descriptions-item>
-        <el-descriptions-item label="HDL-C">{{ viewData.hdlC ?? '—' }}</el-descriptions-item>
-        <el-descriptions-item label="LDL-C">{{ viewData.ldlC ?? '—' }}</el-descriptions-item>
-        <el-descriptions-item label="VLDL-C">{{ viewData.vldlC ?? '—' }}</el-descriptions-item>
-        <el-descriptions-item label="脉搏">{{ viewData.pulse ?? '—' }}</el-descriptions-item>
-        <el-descriptions-item label="舒张压">{{ viewData.diastolicBp ?? '—' }}</el-descriptions-item>
-        <el-descriptions-item label="高血压史">{{ viewData.hypertensionHistory ? '是' : '否' }}</el-descriptions-item>
-        <el-descriptions-item label="尿素氮">{{ viewData.bun ?? '—' }}</el-descriptions-item>
-        <el-descriptions-item label="尿酸">{{ viewData.uricAcid ?? '—' }}</el-descriptions-item>
-        <el-descriptions-item label="肌酐">{{ viewData.creatinine ?? '—' }}</el-descriptions-item>
-      </el-descriptions>
-    </el-drawer>
 
     <!-- 新增/编辑弹窗 -->
     <el-dialog v-model="formVisible" :title="isEdit ? '编辑记录' : '新建记录'" width="640px" destroy-on-close>
@@ -149,16 +141,16 @@ import {
   getAllHealthRecords,
   createHealthRecord,
   updateHealthRecord,
-  deleteHealthRecord
+  deleteHealthRecord,
+  downloadHealthRecordTemplate
 } from '@/api/HealthRecordShow.js'
 
 const loading = ref(false)
 const saving  = ref(false)
+const downloading = ref(false)
+
 const list    = ref([])
 const keyword = ref('')
-
-const viewVisible = ref(false)
-const viewData    = ref({})
 
 const formVisible = ref(false)
 const isEdit      = ref(false)
@@ -201,11 +193,6 @@ const fetchList = async () => {
   } finally {
     loading.value = false
   }
-}
-
-const openView = (row) => {
-  viewData.value = { ...row }
-  viewVisible.value = true
 }
 
 const resetForm = () => {
@@ -272,49 +259,47 @@ const deleteRow = async (row) => {
   }
 }
 
+const downloadTemplate = async () => {
+  try {
+    downloading.value = true
+    const blob = await downloadHealthRecordTemplate() // 这里就是 Blob
+
+    // 如果后端返的是 JSON 错误，这里 type 往往是 application/json
+    if (blob && blob.type && blob.type.includes('json')) {
+      const text = await blob.text()
+      try {
+        const err = JSON.parse(text)
+        ElMessage.error(err.message || '下载失败')
+      } catch {
+        ElMessage.error('下载失败：' + text.slice(0, 120))
+      }
+      return
+    }
+
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = '健康数据模板.xlsx'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    ElMessage.error(e?.message || '下载失败')
+  } finally {
+    downloading.value = false
+  }
+}
+
 onMounted(fetchList)
 </script>
 
 <style scoped>
-.main-content {
-  padding: 20px;
-}
-
-.content-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.page-title {
-  font-size: 20px;
-  color: #303133;
-  margin: 0;
-}
-
-.table-container {
-  background: #fff;
-  border-radius: 4px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  padding: 20px;
-}
-
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.title {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.ops {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
+.main-content { padding: 20px; }
+.content-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.page-title { font-size: 20px; color: #303133; margin: 0; }
+.table-container { background: #fff; border-radius: 4px; box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1); padding: 20px; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.title { font-size: 18px; font-weight: 600; }
+.ops { display: flex; gap: 10px; align-items: center; }
 </style>
