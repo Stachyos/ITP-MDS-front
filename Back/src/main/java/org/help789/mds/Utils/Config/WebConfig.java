@@ -16,7 +16,7 @@ public class WebConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**") // 覆盖所有接口，包括 /user/**、/api/** 等
                 // Spring Boot 3 搭配 allowCredentials(true) 时，建议用 allowedOriginPatterns
-                .allowedOriginPatterns("http://localhost:7488", "http://127.0.0.1:7488")
+                .allowedOriginPatterns("*")
                 .allowedMethods("GET","POST","PUT","DELETE","PATCH","OPTIONS")
                 .allowedHeaders("*")
                 .exposedHeaders("Authorization")
