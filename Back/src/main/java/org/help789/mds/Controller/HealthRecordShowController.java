@@ -1,11 +1,14 @@
 package org.help789.mds.Controller;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.help789.mds.Entity.Vo.HealthRecordShowVo;
 import org.help789.mds.Service.HealthRecordShowService;
 import org.help789.mds.Utils.pojo.Result;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
@@ -59,6 +62,30 @@ public class HealthRecordShowController {
             return Result.success("deleted", id); // 返回被删除的ID
         } catch (Exception e) {
             return Result.failed(e.getMessage());
+        }
+    }
+
+    /**
+     * 下载健康数据 Excel 模板
+     * GET /api/HealthRecordShow/downloadTemplate
+     */
+    @GetMapping("/downloadTemplate")
+    public void downloadTemplate(HttpServletResponse response) {
+        String filename = "健康数据模板.xlsx";
+        try {
+            response.setContentType(
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            // 兼容中文文件名
+            String encoded = URLEncoder.encode(filename, StandardCharsets.UTF_8)
+                    .replaceAll("\\+", "%20");
+            response.setHeader("Content-Disposition",
+                    "attachment; filename*=UTF-8''" + encoded);
+
+            healthRecordService.writeTemplate(response.getOutputStream());
+            response.flushBuffer();
+        } catch (Exception e) {
+            // 如果需要返回 JSON 错误，可以在这里重置响应并写入 Result，但下载场景通常直接抛错即可。
+            throw new RuntimeException("模板下载失败", e);
         }
     }
 }

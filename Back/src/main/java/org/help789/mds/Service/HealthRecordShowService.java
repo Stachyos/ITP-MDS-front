@@ -2,6 +2,7 @@ package org.help789.mds.Service;
 
 import org.help789.mds.Entity.Vo.HealthRecordShowVo;
 
+import java.io.OutputStream;
 import java.util.List;
 
 public interface HealthRecordShowService {
@@ -17,4 +18,7 @@ public interface HealthRecordShowService {
 
     /** 删除单条 */
     void delete(Long recordId);
+
+    /** 导出填写模板 */
+    void writeTemplate(OutputStream out);
 }

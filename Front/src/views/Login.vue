@@ -98,7 +98,7 @@
 import { reactive, ref, computed, onBeforeUnmount } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { apiLogin, apiLoginByEmail, apiSendEmailCode } from '@/api/User.js'
-
+import Request, { setAuthToken } from '@/utils/MDS.js'
 import { useTokenStore } from '@/utils/stores/token'
 import { pinia } from '@/utils/stores'
 
@@ -188,13 +188,16 @@ async function onSubmit() {
     if (resp?.reply) {
       const token = resp.data
 
-      // 用 Pinia 保存
+      // 1) 先写入 Pinia / Storage（保持你原逻辑）
       const tokenStore = useTokenStore(pinia)
       tokenStore.setToken(token, form.remember)
-
-      // （可选）也写入本地存储
       const store = form.remember ? localStorage : sessionStorage
       store.setItem('auth_token', token)
+
+      // 2) 立刻把 token 写进 axios 默认头，保证后续所有请求都会自动携带
+      setAuthToken(token)
+      // 如果你没导出 setAuthToken，也可以用这一行达到同样效果：
+      // Request.defaults.headers.common.Authorization = `Bearer ${token}`
 
       console.log('✅ Login success:', {
         account: form.account || form.email,
@@ -204,22 +207,18 @@ async function onSubmit() {
 
       ElMessage.success(resp?.message || 'Login success')
 
-      // ←←← 在这里睡 10 秒
-      await new Promise(resolve => setTimeout(resolve, 10_000))
-
-      // 再跳转
-      window.location.href = '/'
+      await new Promise(resolve => setTimeout(resolve, 1_000))
+      window.location.href = '/healthRecordShow'
     } else {
       throw new Error(resp?.message || 'Login failed')
     }
+
   } catch (err) {
     if (err?.message) ElMessage.error(err.message)
   } finally {
     loading.value = false
   }
 }
-
-
 
 function onForgot() {
   ElMessageBox.alert(
