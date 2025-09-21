@@ -1,0 +1,40 @@
+server:
+  port: 7486
+
+spring:
+  application:
+    name: MDS
+  datasource:
+    url: "jdbc:mysql://47.243.29.156:3306/ITP-database"
+    username: "ITP-database"
+    password: "0296e0a475cb8e5b"
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 4
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  jpa:
+    hibernate:
+      ddl-auto: update   # 远端库已建表建议用 validate
+    show-sql: true
+    properties:
+      hibernate.format_sql: true
+      hibernate.jdbc.time_zone: Asia/Shanghai
+      hibernate.dialect: org.hibernate.dialect.MySQLDialect
+  mail:
+    host: smtp.qq.com
+    port: 465
+    username: MDSZZJ@qq.com
+    password: cfezerehzdcjdijf
+    properties:
+      mail:
+        smtp:
+          ssl:
+            enable: true
+
+mds:
+  user:
+    login-expires-minutes: 120
+    jwt-token-key: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
