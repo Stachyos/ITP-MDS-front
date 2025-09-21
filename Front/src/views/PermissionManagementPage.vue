@@ -5,41 +5,65 @@
     <div class="main-content">
       <div class="content-header">
         <h2 class="page-title">权限管理</h2>
+        <div class="ops">
+          <el-button type="primary" @click="fetchPermissions" :loading="loading">刷新</el-button>
+        </div>
       </div>
 
       <el-table
+          v-loading="loading"
           :data="permissionList"
           border
           style="width: 100%"
-          v-loading="loading"
+          highlight-current-row
       >
-        <el-table-column prop="user_id" label="用户ID" />
-        <el-table-column prop="account" label="账号" />
-        <el-table-column prop="email" label="邮箱" />
-        <el-table-column prop="access_patient_info" label="病人信息">
+        <el-table-column prop="userId" label="用户ID" width="120" />
+        <el-table-column prop="account" label="账号" width="160" />
+        <el-table-column prop="email" label="邮箱" min-width="200" />
+
+        <el-table-column prop="accessPatientInfo" label="病人信息" width="120">
           <template #default="{ row }">
-            <el-switch v-model="row.access_patient_info" />
+            <el-switch v-model="row.accessPatientInfo" />
           </template>
         </el-table-column>
-        <el-table-column prop="access_research_data" label="科研数据">
+
+        <el-table-column prop="accessResearchData" label="科研数据" width="120">
           <template #default="{ row }">
-            <el-switch v-model="row.access_research_data" />
+            <el-switch v-model="row.accessResearchData" />
           </template>
         </el-table-column>
-        <el-table-column prop="module_report_generation" label="报告生成">
+
+        <el-table-column prop="moduleReportGeneration" label="报告生成" width="120">
           <template #default="{ row }">
-            <el-switch v-model="row.module_report_generation" />
+            <el-switch v-model="row.moduleReportGeneration" />
           </template>
         </el-table-column>
-        <el-table-column prop="module_stats_analysis" label="统计分析">
+
+        <el-table-column prop="moduleStatsAnalysis" label="统计分析" width="120">
           <template #default="{ row }">
-            <el-switch v-model="row.module_stats_analysis" />
+            <el-switch v-model="row.moduleStatsAnalysis" />
           </template>
         </el-table-column>
-        <el-table-column label="操作">
+
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="savePermission(row)">
+            <el-button
+                type="primary"
+                size="small"
+                plain
+                @click="savePermissionRow(row)"
+                :loading="savingId === row.userId"
+            >
               保存
+            </el-button>
+            <el-button
+                type="danger"
+                size="small"
+                plain
+                @click="deletePermissionRow(row)"
+                :loading="deletingId === row.userId"
+            >
+              删除
             </el-button>
           </template>
         </el-table-column>
@@ -50,54 +74,64 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import Header from '@/components/Header.vue'
-
-// 模拟静态数据（关联了 users 和 permissions）
-const permissionList = ref([
-  {
-    permission_id: 1,
-    user_id: 101,
-    account: 'zhangsan',
-    email: 'zhangsan@example.com',
-    access_patient_info: true,
-    access_research_data: false,
-    module_report_generation: true,
-    module_stats_analysis: false
-  },
-  {
-    permission_id: 2,
-    user_id: 102,
-    account: 'lisi',
-    email: 'lisi@example.com',
-    access_patient_info: false,
-    access_research_data: true,
-    module_report_generation: false,
-    module_stats_analysis: true
-  },
-  {
-    permission_id: 3,
-    user_id: 103,
-    account: 'wangwu',
-    email: 'wangwu@example.com',
-    access_patient_info: true,
-    access_research_data: true,
-    module_report_generation: true,
-    module_stats_analysis: true
-  }
-])
+import {
+  getAllPermissions,
+  savePermission,
+  deletePermission
+} from '@/api/Permission.js'
 
 const loading = ref(false)
+const savingId = ref(null)
+const deletingId = ref(null)
+const permissionList = ref([])
 
+// 获取权限列表
 const fetchPermissions = async () => {
   loading.value = true
-  setTimeout(() => {
+  try {
+    const res = await getAllPermissions()
+    permissionList.value = res.data || []
+  } catch (err) {
+    ElMessage.error(err?.response?.data?.message || err?.message || '加载失败')
+  } finally {
     loading.value = false
-  }, 500)
+  }
 }
 
-const savePermission = async (row) => {
-  ElMessage.success(`用户 ${row.account} (${row.email}) 权限已更新 (模拟保存)`)
+// 保存单个用户的权限
+const savePermissionRow = async (row) => {
+  savingId.value = row.userId
+  try {
+    await savePermission(row)
+    ElMessage.success(`用户 ${row.account} (${row.email}) 权限已更新`)
+  } catch (err) {
+    ElMessage.error(err?.response?.data?.message || err?.message || '保存失败')
+  } finally {
+    savingId.value = null
+  }
+}
+
+// 删除单个用户权限
+const deletePermissionRow = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+        `确定删除用户 ${row.account} (${row.email}) 的权限吗？`,
+        '提示',
+        { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
+    )
+    deletingId.value = row.userId
+    await deletePermission(row.permissionId)
+    ElMessage.success('删除成功')
+    fetchPermissions()
+  } catch (err) {
+    if (err !== 'cancel') {
+      ElMessage.error(err?.response?.data?.message || err?.message || '删除失败')
+    }
+  } finally {
+    deletingId.value = null
+  }
 }
 
 onMounted(fetchPermissions)
@@ -112,11 +146,18 @@ onMounted(fetchPermissions)
   padding: 20px;
 }
 .content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
 }
 .page-title {
   font-size: 20px;
   font-weight: 600;
   color: #303133;
+}
+.ops {
+  display: flex;
+  gap: 10px;
 }
 </style>
