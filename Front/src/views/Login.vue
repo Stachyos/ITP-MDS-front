@@ -1,6 +1,13 @@
 <template>
   <div class="login-page">
     <el-card class="login-card" shadow="never">
+
+      <!-- 顶部 Logo 和 Title -->
+      <div class="header">
+        <img src="@/assets/logo.png" alt="Logo" class="logo" />
+        <h1 class="main-title">Health Big Data Application</h1>
+      </div>
+
       <div class="title">Sign In</div>
 
       <!-- Login mode switch -->
@@ -29,6 +36,7 @@
                 placeholder="Enter account"
                 clearable
                 autocomplete="username"
+                size="large"
             />
           </el-form-item>
           <el-form-item label="Password" prop="password">
@@ -38,6 +46,7 @@
                 placeholder="Enter password"
                 show-password
                 autocomplete="current-password"
+                size="large"
             />
             <template #extra>
               <el-link type="primary" :underline="false" @click="onForgot">Forgot password?</el-link>
@@ -53,6 +62,7 @@
                 placeholder="you@example.com"
                 clearable
                 autocomplete="email"
+                size="large"
             />
           </el-form-item>
           <el-form-item label="Verification Code" prop="code">
@@ -62,11 +72,17 @@
                   maxlength="6"
                   placeholder="6-digit code"
                   class="code-input"
+                  size="large"
               />
-              <el-button :disabled="sendDisabled || sending" @click="onSendCode">
+              <el-button
+                  :disabled="sendDisabled || sending"
+                  @click="onSendCode"
+                  size="large"
+              >
                 {{ sendBtnText }}
               </el-button>
             </div>
+
           </el-form-item>
         </template>
 
@@ -260,52 +276,170 @@ function onRegister() {
 <style scoped>
 .login-page {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
-  background: #0f172a;
-  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start; /* 顶部开始，更自然 */
+  padding-top: 60px;          /* 保证登录框不会太靠下 */
+  background: linear-gradient(135deg, #e0f7fa 0%, #f0fdfa 100%);
 }
+
 .login-card {
-  width: min(720px, 92vw);
-  background: #0b1220;
-  border: 1px solid #1f2937;
+  width: min(420px, 92vw);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid #e5e7eb;
   border-radius: 16px;
-  padding: 24px 24px 8px;
-  color: #e5e7eb;
+  padding: 30px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease;
 }
+
+.login-card:hover {
+  transform: translateY(-4px);
+}
+
 .title {
   font-size: 24px;
   font-weight: 700;
-  margin-bottom: 16px;
+  color: #059669;
+  text-align: center;
+  margin-bottom: 25px;
+  position: relative;
 }
+
+.title::after {
+  content: '';
+  display: block;
+  width: 50px;
+  height: 3px;
+  background: linear-gradient(to right, #10b981, #3b82f6);
+  margin: 10px auto 0;
+  border-radius: 3px;
+}
+
 .mode-switch {
-  margin-bottom: 8px;
+  margin-bottom: 20px;
 }
+
 .code-row {
   display: flex;
   gap: 12px;
   align-items: center;
 }
+
 .code-input {
   flex: 1;
 }
+
 .between {
   width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 10px;
 }
+
 .submit-btn {
   width: 100%;
   height: 44px;
   font-size: 16px;
+  font-weight: 600;
+  background: linear-gradient(to right, #10b981, #3b82f6);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  transition: all 0.3s ease;
 }
+
+.submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+}
+
 .register-line {
   text-align: center;
-  margin: 8px 0 16px;
-  color: #9ca3af;
+  margin: 20px 0 10px;
+  color: #4b5563;
+  font-size: 15px;
 }
-:deep(.el-card__body) {
-  padding: 16px 20px 8px;
+
+/* Element Plus 样式覆盖 */
+:deep(.el-input__wrapper) {
+  background: rgba(30, 41, 59, 0.05);
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  box-shadow: none;
+  padding: 12px 16px;
 }
+
+:deep(.el-input__inner) {
+  color: #111827;
+}
+
+:deep(.el-form-item__label) {
+  color: #374151;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+:deep(.el-segmented) {
+  background: transparent;
+}
+
+:deep(.el-segmented__item) {
+  color: #6b7280;
+  background: transparent;
+}
+
+:deep(.el-segmented__item.is-selected) {
+  color: white;
+  background: linear-gradient(to right, #10b981, #3b82f6);
+}
+
+:deep(.el-checkbox__label) {
+  color: #374151;
+}
+
+:deep(.el-link) {
+  font-size: 14px;
+}
+
+:deep(.el-button--success.is-text) {
+  color: #10b981;
+  padding: 0 4px;
+}
+
+:deep(.el-button--success.is-text:hover) {
+  color: #34d399;
+  background: transparent;
+}
+
+:deep(.el-button:disabled) {
+  opacity: 0.6;
+}
+
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.logo {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+
+.main-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  text-align: center;
+}
+
+
 </style>
