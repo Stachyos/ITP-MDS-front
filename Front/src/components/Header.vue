@@ -20,11 +20,6 @@
     </div>
 
     <div class="header-right">
-      <el-tooltip content="消息通知" placement="bottom">
-        <el-badge :value="5" class="notification-badge">
-          <el-icon :size="20"><Bell /></el-icon>
-        </el-badge>
-      </el-tooltip>
 
       <el-dropdown trigger="click" class="user-dropdown">
         <span class="el-dropdown-link">
@@ -38,10 +33,7 @@
               <el-icon><User /></el-icon>
               个人中心
             </el-dropdown-item>
-            <el-dropdown-item>
-              <el-icon><Message /></el-icon>
-              消息通知
-            </el-dropdown-item>
+
             <el-dropdown-item divided @click="handleLogout">
               <el-icon><SwitchButton /></el-icon>
               退出登录

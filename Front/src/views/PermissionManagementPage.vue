@@ -17,9 +17,10 @@
           style="width: 100%"
           highlight-current-row
       >
-        <el-table-column prop="userId" label="用户ID" width="120" />
-        <el-table-column prop="account" label="账号" width="160" />
-        <el-table-column prop="email" label="邮箱" min-width="200" />
+        <el-table-column prop="userId" label="用户ID" width="100" />
+        <el-table-column prop="account" label="账号" width="220" />
+        <el-table-column prop="email" label="邮箱" min-width="160" />
+
 
         <el-table-column prop="accessPatientInfo" label="病人信息" width="120">
           <template #default="{ row }">
@@ -92,7 +93,12 @@ const fetchPermissions = async () => {
   loading.value = true
   try {
     const res = await getAllPermissions()
-    permissionList.value = res.data || []
+    //TODO: for test
+    console.log('返回结果:', res)
+
+    // permissionList.value = res.data || []
+    permissionList.value = res || []
+
   } catch (err) {
     ElMessage.error(err?.response?.data?.message || err?.message || '加载失败')
   } finally {
