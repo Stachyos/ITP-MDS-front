@@ -281,7 +281,13 @@ function onRegister() {
   align-items: center;
   justify-content: flex-start; /* 顶部开始，更自然 */
   padding-top: 60px;          /* 保证登录框不会太靠下 */
-  background: linear-gradient(135deg, #e0f7fa 0%, #f0fdfa 100%);
+  background: linear-gradient(
+      to bottom,
+      #d1fae5 0%,
+      #a7f3d0 70%,
+      #99face 80%,
+      #4afba9 100%
+  );
 }
 
 .login-card {
@@ -300,7 +306,7 @@ function onRegister() {
 }
 
 .title {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   color: #059669;
   text-align: center;
@@ -435,7 +441,7 @@ function onRegister() {
 }
 
 .main-title {
-  font-size: 22px;
+  font-size: 25px;
   font-weight: 700;
   color: #111827;
   text-align: center;
