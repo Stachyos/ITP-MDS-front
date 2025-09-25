@@ -161,6 +161,22 @@
       </template>
     </el-dialog>
   </div>
+  <!-- 右下角：导出报告（悬浮） -->
+  <div class="export-fab" :class="{ disabled: loading }" @click="onExportClick">
+    导出报告
+  </div>
+
+  <!-- 选择导出格式 -->
+  <el-dialog v-model="chooseExportVisible" title="选择导出格式" width="420px">
+    <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:8px;">
+      <el-button size="large" @click="onExportCommand('csv')">CSV（通用）</el-button>
+      <el-button size="large" @click="onExportCommand('xlsx')">Excel（.xlsx）</el-button>
+      <el-button size="large" @click="onExportCommand('pdf')">PDF（表格）</el-button>
+    </div>
+    <template #footer>
+      <el-button @click="chooseExportVisible=false">取 消</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -394,6 +410,181 @@ const onFileChange = async (e) => {
     importing.value = false
   }
 }
+// === 导出：点击主按钮先询问 ===
+const chooseExportVisible = ref(false)
+
+const onExportClick = () => {
+  if (loading.value) return
+  // 打开“选择导出格式”的弹窗
+  chooseExportVisible.value = true
+}
+
+// 也复用下拉命令的处理（弹窗和下拉共用同一入口）
+const onExportCommand = async (cmd) => {
+  chooseExportVisible.value = false
+  if (!filteredList.value?.length) {
+    ElMessage.warning('当前没有可导出的数据')
+    return
+  }
+  try {
+    if (cmd === 'csv') await exportCSV()
+    else if (cmd === 'xlsx') await exportXLSX()
+    else if (cmd === 'pdf') await exportPDF()
+  } catch (e) {
+    ElMessage.error(e?.message || '导出失败')
+  }
+}
+
+// === 导出实现 ===
+const ts = () => {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
+}
+
+const EXPORT_COLUMNS = [
+  { key: 'recordId',         title: 'ID' },
+  { key: 'name',             title: 'Name/Label' },
+  { key: 'sex',              title: 'Gender', format: mapSex },              // ← 加上 format
+  { key: 'age',              title: 'Age' },
+  { key: 'totalCholesterol', title: 'Total Cholesterol' },
+  { key: 'triglyceride',     title: 'Triglycerides' },
+  { key: 'hdlC',             title: 'HDL-C' },
+  { key: 'ldlC',             title: 'LDL-C' },
+  { key: 'vldlC',            title: 'VLDL-C' },
+  { key: 'pulse',            title: 'Pulse' },
+  { key: 'diastolicBp',      title: 'Diastolic BP' },
+  { key: 'hypertensionHistory', title: 'Hypertension History', format: mapYesNo }, // ← 加上 format
+  { key: 'bun',              title: 'Blood Urea Nitrogen (BUN)' },
+  { key: 'uricAcid',         title: 'Uric Acid' },
+  { key: 'creatinine',       title: 'Creatinine' },
+]
+
+// 2) 映射函数（兼容中英文/布尔/数字）
+function mapSex(v) {
+  const s = String(v ?? '').trim().toLowerCase()
+  if (['男','m','male','man','1'].includes(s)) return 'Male'
+  if (['女','f','female','woman','0'].includes(s)) return 'Female'
+  if (['其他','other'].includes(s)) return 'Other'
+  if (['未知','unknown','unk',''].includes(s)) return 'Unknown'
+  // 兜底：原样返回（避免误伤）
+  return v ?? ''
+}
+
+function mapYesNo(v) {
+  if (typeof v === 'boolean') return v ? 'Yes' : 'No'
+  const s = String(v ?? '').trim().toLowerCase()
+  if (['是','yes','y','true','1'].includes(s)) return 'Yes'
+  if (['否','no','n','false','0'].includes(s)) return 'No'
+  // 兜底：原样返回
+  return v ?? ''
+}
+
+// 3) 导出用的数据行构建（调用 format）
+const buildRows = () => {
+  return filteredList.value.map(row => {
+    const obj = {}
+    for (const c of EXPORT_COLUMNS) {
+      const raw = row?.[c.key]
+      // 先处理你之前的高血压史布尔 -> 中英文，此处改为统一走 format
+      const val = typeof c.format === 'function' ? c.format(raw, row) : (raw ?? '')
+      obj[c.title] = val
+    }
+    return obj
+  })
+}
+
+// CSV 导出（原生，无需第三方库）
+const exportCSV = async () => {
+  const rows = buildRows()
+  const headers = Object.keys(rows[0] || EXPORT_COLUMNS.reduce((acc, c) => (acc[c.title]='', acc), {}))
+  const esc = (s) => {
+    const str = String(s ?? '')
+    // 若包含逗号/引号/换行，按 CSV 规范转义
+    if (/[",\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`
+    return str
+  }
+  const lines = [
+    headers.join(','),
+    ...rows.map(row => headers.map(h => esc(row[h])).join(','))
+  ]
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `HealthRecords_${ts()}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  ElMessage.success('CSV 导出完成')
+}
+
+// Excel 导出（需要 xlsx 依赖）
+const exportXLSX = async () => {
+  try {
+    const xlsx = await import('xlsx')  // 动态导入
+    const rows = buildRows()
+    const ws = xlsx.utils.json_to_sheet(rows)
+    const wb = xlsx.utils.book_new()
+    xlsx.utils.book_append_sheet(wb, ws, 'Records')
+    xlsx.writeFile(wb, `HealthRecords_${ts()}.xlsx`)
+    ElMessage.success('Excel 导出完成')
+  } catch (e) {
+    // 未安装时给出指引
+    ElMessage.error('未检测到 xlsx 依赖，请先安装：npm i xlsx')
+    throw e
+  }
+}
+
+// PDF 导出（推荐 jspdf + jspdf-autotable）
+const exportPDF = async () => {
+  try {
+    const jsPDF = (await import('jspdf')).default
+    let autoTable
+    try {
+      autoTable = (await import('jspdf-autotable')).default
+    } catch {
+      // 允许缺少 autotable，但体验会差
+    }
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
+
+    doc.setFontSize(16)
+    doc.text('健康数据记录导出', 40, 40)
+
+    const rows = buildRows()
+    const headers = Object.keys(rows[0] || EXPORT_COLUMNS.reduce((acc, c) => (acc[c.title]='', acc), {}))
+
+    if (autoTable) {
+      autoTable(doc, {
+        head: [headers],
+        body: rows.map(r => headers.map(h => r[h])),
+        startY: 60,
+        styles: { fontSize: 9, cellPadding: 4 },
+        headStyles: { fontStyle: 'bold' }
+      })
+    } else {
+      // 简单兜底：逐行打印（列多时可能溢出）
+      doc.setFontSize(10)
+      let y = 60
+      doc.text(headers.join(' | '), 40, y)
+      y += 16
+      rows.forEach(row => {
+        doc.text(headers.map(h => String(row[h])).join(' | '), 40, y)
+        y += 14
+        if (y > 560) { doc.addPage(); y = 40 }
+      })
+    }
+
+    doc.save(`HealthRecords_${ts()}.pdf`)
+    ElMessage.success('PDF 导出完成')
+  } catch (e) {
+    ElMessage.error('PDF 导出失败，如需表格排版请安装：npm i jspdf jspdf-autotable')
+    throw e
+  }
+}
+
 
 onMounted(fetchList)
 </script>
@@ -406,4 +597,67 @@ onMounted(fetchList)
 .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .title { font-size: 18px; font-weight: 600; }
 .ops { display: flex; gap: 10px; align-items: center; }
+/* 右下角主按钮 */
+.export-fab {
+  position: fixed;
+  right: calc(24px + env(safe-area-inset-right));
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  z-index: 4000;               /* 高于大多数 Element Plus 弹层 */
+  background: #409eff;         /* Element Plus 主色 */
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(64,158,255,.35);
+  cursor: pointer;
+  user-select: none;
+  transition: transform .12s ease, box-shadow .12s ease, opacity .2s ease;
+}
+.export-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(64,158,255,.45);
+}
+.export-fab.disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 6px 18px rgba(0,0,0,.12);
+}
+
+/* 三点菜单的悬浮定位（可选） */
+.export-fab-menu {
+  position: fixed;
+  right: calc(24px + env(safe-area-inset-right));
+  bottom: calc(84px + env(safe-area-inset-bottom)); /* 与主按钮竖直错开 */
+  z-index: 4000;
+}
+.export-fab-menu__trigger {
+  width: 42px;
+  height: 42px;
+  line-height: 42px;
+  display: inline-block;
+  text-align: center;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid #ebeef5;
+  box-shadow: 0 6px 18px rgba(0,0,0,.08);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 18px;
+}
+.export-fab-menu__trigger:hover {
+  box-shadow: 0 10px 24px rgba(0,0,0,.12);
+}
+
+/* 小屏适配：离边距更近一点 */
+@media (max-width: 768px) {
+  .export-fab {
+    right: calc(16px + env(safe-area-inset-right));
+    bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+  .export-fab-menu {
+    right: calc(16px + env(safe-area-inset-right));
+    bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+}
+
 </style>
