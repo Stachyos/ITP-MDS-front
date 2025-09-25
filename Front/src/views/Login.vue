@@ -284,9 +284,9 @@ function onRegister() {
   background: linear-gradient(
       to bottom,
       #d1fae5 0%,
-      #a7f3d0 70%,
+      #b3f8d8 70%,
       #99face 80%,
-      #4afba9 100%
+      #70f8b8 100%
   );
 }
 
