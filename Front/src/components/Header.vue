@@ -1,6 +1,7 @@
 <template>
   <el-header class="main-header">
     <div class="header-left">
+      <img src="@/assets/logo_blue.png" alt="logo" class="logo" />
       <h2 class="system-title">Health Big Data Application</h2>
       <el-menu
           :default-active="activeIndex"
@@ -104,9 +105,17 @@ const handleLogout = () => {
 }
 
 .system-title {
+  display: flex;
+  align-items: center;
+  margin-left: 10px;
   margin-right: 30px;
   color: #409EFF;
   font-size: 20px;
+}
+
+.logo {
+  width: 36px;   /* 你可以根据需求调整大小 */
+  height: 36px;
 }
 
 .nav-menu {

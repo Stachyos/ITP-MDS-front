@@ -22,7 +22,7 @@
         <el-table-column prop="email" label="邮箱" min-width="160" />
 
 
-        <el-table-column prop="accessPatientInfo" label="病人信息" width="120">
+        <el-table-column prop="accessLogPage" label="查看日志" width="120">
           <template #default="{ row }">
             <el-switch v-model="row.accessPatientInfo" />
           </template>
@@ -41,6 +41,12 @@
         </el-table-column>
 
         <el-table-column prop="moduleStatsAnalysis" label="统计分析" width="120">
+          <template #default="{ row }">
+            <el-switch v-model="row.moduleStatsAnalysis" />
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="optionEdit" label="编辑表格" width="120">
           <template #default="{ row }">
             <el-switch v-model="row.moduleStatsAnalysis" />
           </template>

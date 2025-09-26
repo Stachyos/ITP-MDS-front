@@ -28,7 +28,7 @@ public class Permission {
     private Long userId;
 
     // —— 数据访问 ——
-    @Column(name = "access_patient_info", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    @Column(name = "access_log_page", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
     @Builder.Default
     private Boolean accessPatientInfo = false;
 
@@ -51,7 +51,4 @@ public class Permission {
     @Builder.Default
     private Boolean opEdit = false;
 
-    @Column(name = "op_delete", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
-    @Builder.Default
-    private Boolean opDelete = false;
 }
