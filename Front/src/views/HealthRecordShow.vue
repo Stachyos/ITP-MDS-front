@@ -30,6 +30,15 @@
           </div>
         </div>
 
+        <!-- 导入进度条 -->
+        <el-progress
+            v-if="showProgress"
+            :percentage="importProgress"
+            :stroke-width="18"
+            status="success"
+            style="margin-bottom: 10px;"
+        />
+
         <!-- 数据表（直接展示主要字段） -->
         <el-table
             v-loading="loading"
@@ -193,6 +202,8 @@ import {
 } from '@/api/HealthRecordShow.js'
 
 const loading = ref(false)
+const importProgress = ref(0)        // 进度百分比
+const showProgress   = ref(false)    // 控制进度条显示
 const saving  = ref(false)
 const downloading = ref(false)
 
@@ -359,55 +370,45 @@ const downloadTemplate = async () => {
 // 选择文件后上传导入
 const onFileChange = async (e) => {
   const file = e.target.files && e.target.files[0]
-  e.target.value = '' // 允许同一文件反复选择
+  e.target.value = ''
   if (!file) return
 
   const format = inferFormatByExt(file.name)
-  console.groupCollapsed('[导入] 请求参数')
-  console.log('file:', file)
-  console.log('infer format:', format)
-  console.groupEnd()
 
   try {
     importing.value = true
+    importProgress.value = 0
+    showProgress.value = true
 
-    const resp = await importHealthRecords(file, format)
-    const body = resp.data || resp || {} // 你的 request 可能做了解包
+    const formData = new FormData()
+    formData.append('file', file)
+    if (format) formData.append('format', format)
 
-    // 调试：完整打印
-    console.groupCollapsed('[导入] 原始响应')
-    console.log('resp:', resp)
-    console.log('body:', body)
-    console.groupEnd()
+    const resp = await axios.post('/api/HealthRecordShow/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          importProgress.value = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+          )
+        }
+      }
+    })
 
-    // 调试面板赋值
+    const body = resp.data || {}
     rawImportResp.value = JSON.stringify(body, null, 2)
     importSummary.value = body?.data || null
     showImportDetail.value = true
 
-    // 业务提示
-    if (body.reply) {
-      const s = body.data || {}
-      const msg = `导入完成：共${s.totalRows ?? 0}，入库${s.saved ?? 0}，去重${s.deduplicated ?? 0}，缺关键${s.skippedMissingKey ?? 0}，异常${s.skippedAbnormal ?? 0}`
-      ElMessage.success(msg)
-      fetchList()
-    } else {
-      ElMessage.error(body.message || '导入失败')
-    }
+    ElMessage.success('导入完成')
+    fetchList()
   } catch (err) {
-    // 把错误也放到调试弹窗
-    const errObj = {
-      message: err?.message,
-      response: err?.response?.data || null,
-      stack: err?.stack?.split('\n').slice(0,3).join('\n')
-    }
-    rawImportResp.value = JSON.stringify(errObj, null, 2)
-    importSummary.value = null
+    rawImportResp.value = JSON.stringify(err?.response?.data || err, null, 2)
     showImportDetail.value = true
-
-    ElMessage.error(err?.response?.data?.message || err?.message || '导入失败')
+    ElMessage.error(err?.message || '导入失败')
   } finally {
     importing.value = false
+    setTimeout(() => { showProgress.value = false }, 800) // 收起进度条
   }
 }
 // === 导出：点击主按钮先询问 ===
