@@ -8,15 +8,13 @@ import org.help789.mds.Service.EmailCodeService;
 import org.help789.mds.Service.JWTservice;
 import org.help789.mds.Service.MailSenderService;
 import org.help789.mds.Service.UserService;
+import org.help789.mds.Utils.ThreadLocalUtil;
 import org.help789.mds.Utils.pojo.Result;
 import org.help789.mds.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -156,6 +154,10 @@ public class UserServiceImpl implements UserService {
         }
 
         // 5) 如需记录登录态/审计日志，可在此处处理
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("id", user.getId().toString()); // 存成字符串最保险
+        claims.put("name", user.getRealName());
+        ThreadLocalUtil.setClaim(claims);
         return Result.success("登录成功", token);
     }
 
