@@ -31,7 +31,7 @@ export function deleteHealthRecord(id) {
 // 导出excel
 export function downloadHealthRecordTemplate() {
     return request
-        .get('/HealthRecordShow/downloadTemplate', { responseType: 'blob' })
+        .get('/api/HealthRecordShow/downloadTemplate', { responseType: 'blob' })
         .then(res => res.data ?? res)  // 统一成 Blob
 }
 
@@ -39,7 +39,7 @@ export function downloadHealthRecordTemplate() {
 export function importHealthRecords(file, format) {
     const form = new FormData()
     form.append('file', file)
-    const url = format ? `/HealthRecordShow/import?format=${format}` : `/HealthRecordShow/import`
+    const url = format ? `/api/HealthRecordShow/import?format=${format}` : `/HealthRecordShow/import`
     return request.post(url, form, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 120000,                // ← 单接口加长
