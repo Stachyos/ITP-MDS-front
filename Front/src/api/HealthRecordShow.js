@@ -45,6 +45,4 @@ export function importHealthRecords(file, format) {
         timeout: 120000,                // ← 单接口加长
         onUploadProgress: e => {/* 可选：显示进度 */}
     })
-
-
 }
