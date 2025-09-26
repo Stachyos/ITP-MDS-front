@@ -156,6 +156,7 @@ public class UserServiceImpl implements UserService {
         // 5) 如需记录登录态/审计日志，可在此处处理
         Map<String, Object> claims = ThreadLocalUtil.createUserInfoClaim(user.getId(), user.getAccount());
         ThreadLocalUtil.setClaim(claims);
+        System.out.println("userid: " + ThreadLocalUtil.getCurrentUserId());
         return Result.success("登录成功", token);
     }
 
