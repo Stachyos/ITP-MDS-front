@@ -24,7 +24,7 @@
 
         <el-table-column prop="accessLogPage" label="查看日志" width="120">
           <template #default="{ row }">
-            <el-switch v-model="row.accessPatientInfo" />
+            <el-switch v-model="row.accessLogPage" />
           </template>
         </el-table-column>
 
@@ -48,7 +48,7 @@
 
         <el-table-column prop="optionEdit" label="编辑表格" width="120">
           <template #default="{ row }">
-            <el-switch v-model="row.moduleStatsAnalysis" />
+            <el-switch v-model="row.optionEdit" />
           </template>
         </el-table-column>
 

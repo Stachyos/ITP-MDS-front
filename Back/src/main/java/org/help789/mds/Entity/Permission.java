@@ -30,7 +30,7 @@ public class Permission {
     // —— 数据访问 ——
     @Column(name = "access_log_page", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
     @Builder.Default
-    private Boolean accessPatientInfo = false;
+    private Boolean accessLogPage = false;
 
     @Column(name = "access_research_data", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
     @Builder.Default
