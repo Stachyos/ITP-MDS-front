@@ -47,8 +47,8 @@ public class Permission {
 
     // —— 操作类型 ——
 
-    @Column(name = "op_edit", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    @Column(name = "option_edit", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
     @Builder.Default
-    private Boolean opEdit = false;
+    private Boolean optionEdit = false;
 
 }
