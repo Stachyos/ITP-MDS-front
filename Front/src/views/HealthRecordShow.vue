@@ -74,6 +74,7 @@
             <template #default="{ row }">
               <el-button size="small" type="primary" plain @click.stop="openEdit(row)">编辑</el-button>
               <el-button size="small" type="danger"  plain @click.stop="deleteRow(row)">删除</el-button>
+              <el-button size="small" plain @click.stop="exportOnePDF(row)">生成</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -200,6 +201,10 @@ import {
   downloadHealthRecordTemplate,
   importHealthRecords
 } from '@/api/HealthRecordShow.js'
+import { assessMetrics } from '@/utils/health/assess.js'
+
+import axios from 'axios'
+
 
 const loading = ref(false)
 const importProgress = ref(0)        // 进度百分比
@@ -585,6 +590,175 @@ const exportPDF = async () => {
     throw e
   }
 }
+
+// —— 单条导出：把一条 row 映射为导出行（复用 EXPORT_COLUMNS + format）
+const buildOneRow = (row) => {
+  const obj = {}
+  for (const c of EXPORT_COLUMNS) {
+    const raw = row?.[c.key]
+    const val = typeof c.format === 'function' ? c.format(raw, row) : (raw ?? '')
+    obj[c.title] = val
+  }
+  return obj
+}
+// — Polished PDF (info card + metrics table + footer page numbers)
+// — Polished PDF (info card + assessment table + raw table + footer page numbers)
+const exportOnePDF = async (row) => {
+  try {
+    const jsPDF = (await import('jspdf')).default
+    let autoTable
+    try { autoTable = (await import('jspdf-autotable')).default } catch {}
+
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
+    const margin = { left: 56, right: 56, top: 68, bottom: 56 }
+    const pageWidth  = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+
+    // Title
+    doc.setFontSize(18)
+    doc.text('Personal Health Record', margin.left, margin.top)
+
+    // Divider
+    const lineY = margin.top + 14
+    doc.setDrawColor(230)
+    doc.line(margin.left, lineY, pageWidth - margin.right, lineY)
+
+    // Info card
+    const infoY = lineY + 18
+    doc.setFontSize(12)
+    const safe = (v) => (v ?? '-') + ''
+    const leftX  = margin.left
+    const rightX = pageWidth / 2
+
+    // 若你已定义了 mapSex，可替换为统一显示；否则仍用原值
+    const genderText = (typeof mapSex === 'function') ? mapSex(row.sex) : safe(row.sex)
+
+    doc.text(`Name: ${safe(row.name)}`,       leftX,  infoY)
+    doc.text(`Gender: ${genderText}`,         leftX,  infoY + 18)
+    doc.text(`Age: ${safe(row.age)}`,         leftX,  infoY + 36)
+    doc.text(`Record ID: ${safe(row.recordId)}`, rightX, infoY)
+    doc.text(`Exported at: ${new Date().toLocaleString()}`, rightX, infoY + 18)
+
+    // ========= Section 1: Health Assessment（评估表）=========
+    let y = infoY + 56
+    doc.setFontSize(14)
+    doc.text('Health Assessment', margin.left, y)
+    y += 8
+    doc.setDrawColor(240)
+    doc.line(margin.left, y, pageWidth - margin.right, y)
+    y += 10
+
+    const metrics = assessMetrics(row) // [{ item, valueStr, statusText, statusColor }...]
+    const assessHead = ['Item', 'Value', 'Status']
+
+    if (autoTable) {
+      autoTable(doc, {
+        head: [assessHead],
+        body: metrics.map(m => [m.item, m.valueStr, m.statusText]),
+        startY: y,
+        margin,
+        styles: { fontSize: 11, cellPadding: 6, overflow: 'linebreak', lineColor: 230, lineWidth: 0.5 },
+        headStyles: { fillColor: [64, 158, 255], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: {
+          0: { cellWidth: 180 },   // Item
+          1: { cellWidth: 120 },   // Value
+          2: { cellWidth: 'auto' } // Status
+        },
+        // 给 Status 列按评估颜色上色
+        didParseCell: (data) => {
+          const { section, column, row, cell } = data
+          if (section === 'body' && column.index === 2) {
+            const m = metrics[row.index]
+            if (m?.statusColor?.length === 3) {
+              cell.textColor = m.statusColor
+              cell.styles.fontStyle = 'bold'
+            }
+          }
+        },
+        didDrawPage: () => {
+          const page  = doc.internal.getCurrentPageInfo().pageNumber
+          const total = doc.getNumberOfPages()
+          doc.setFontSize(10); doc.setTextColor(130)
+          doc.text(`Page ${page} of ${total}`, pageWidth - margin.right, pageHeight - 26, { align: 'right' })
+          doc.setTextColor(0,0,0) // 恢复默认颜色
+        },
+      })
+      y = doc.lastAutoTable ? doc.lastAutoTable.finalY + 24 : (y + 24)
+    } else {
+      // 无 autotable 的兜底渲染
+      doc.setFontSize(12)
+      let yy = y
+      doc.text(assessHead.join(' | '), margin.left, yy); yy += 18
+      doc.setFontSize(11)
+      metrics.forEach((m) => {
+        const left = `${m.item} | ${m.valueStr} | `
+        doc.setTextColor(0,0,0)
+        doc.text(left, margin.left, yy)
+        const sx = margin.left + doc.getTextWidth(left)
+        const [r,g,b] = m.statusColor || [0,0,0]
+        doc.setTextColor(r,g,b)
+        doc.text(String(m.statusText || ''), sx, yy)
+        yy += 16
+        if (yy > pageHeight - margin.bottom) { doc.addPage(); yy = margin.top }
+      })
+      doc.setTextColor(0,0,0)
+      y = yy + 24
+    }
+
+    // ========= Section 2: Raw Values（原始值表）=========
+    doc.setFontSize(14)
+    doc.text('Raw Values', margin.left, y)
+    y += 8
+    doc.setDrawColor(240)
+    doc.line(margin.left, y, pageWidth - margin.right, y)
+    y += 10
+
+    const r = buildOneRow(row) // 复用你已有的函数：将该条数据映射为 {Title: value}
+    const rawBody = Object.entries(r).map(([k, v]) => [k, String(v ?? '')])
+    const rawHead = ['Item', 'Value']
+
+    if (autoTable) {
+      autoTable(doc, {
+        head: [rawHead],
+        body: rawBody,
+        startY: y,
+        margin,
+        styles: { fontSize: 11, cellPadding: 6, overflow: 'linebreak', lineColor: 230, lineWidth: 0.5 },
+        headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: { 0: { cellWidth: 220 }, 1: { cellWidth: 'auto' } },
+        didDrawPage: () => {
+          const page  = doc.internal.getCurrentPageInfo().pageNumber
+          const total = doc.getNumberOfPages()
+          doc.setFontSize(10); doc.setTextColor(130)
+          doc.text(`Page ${page} of ${total}`, pageWidth - margin.right, pageHeight - 26, { align: 'right' })
+          doc.setTextColor(0,0,0)
+        },
+      })
+    } else {
+      doc.setFontSize(11)
+      let yy = y
+      doc.text(rawHead.join(' | '), margin.left, yy); yy += 16
+      rawBody.forEach((row2) => {
+        doc.setTextColor(0,0,0)
+        doc.text(row2.join(' : '), margin.left, yy)
+        yy += 14
+        if (yy > pageHeight - margin.bottom) { doc.addPage(); yy = margin.top }
+      })
+      doc.setTextColor(0,0,0)
+    }
+
+    // Save
+    const base = `HealthRecord_${(row.name ?? 'one')}_${row.recordId || 'one'}_${ts()}`
+    doc.save(`${base}.pdf`)
+    ElMessage.success('Single-record PDF exported')
+  } catch (e) {
+    ElMessage.error('PDF export failed. For table layout, please install: npm i jspdf jspdf-autotable')
+    throw e
+  }
+}
+
 
 
 onMounted(fetchList)
