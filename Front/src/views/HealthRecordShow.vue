@@ -209,7 +209,6 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'        // 👈 补上 watch
-import axios from 'axios'                                    // 👈 补上 axios
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Header from '@/components/Header.vue'
 import {
@@ -426,22 +425,17 @@ const onFileChange = async (e) => {
     importProgress.value = 0
     showProgress.value = true
 
-    const formData = new FormData()
-    formData.append('file', file)
-    if (format) formData.append('format', format)
-
-    const resp = await axios.post('/api/HealthRecordShow/import', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    const resp = await importHealthRecords(file, format, {
       onUploadProgress: (progressEvent) => {
-        if (progressEvent.total) {
+        if (progressEvent?.total) {
           importProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total)
         }
       }
     })
 
-    const body = resp.data || {}
-    rawImportResp.value = JSON.stringify(body, null, 2)
-    importSummary.value = body?.data || null
+    // 注意：request 拦截器已把 res => res.data 了，这里 resp 就是业务 Result
+    rawImportResp.value = JSON.stringify(resp, null, 2)
+    importSummary.value = resp?.data || null
     showImportDetail.value = true
 
     ElMessage.success('导入完成')
