@@ -28,32 +28,54 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest req, HttpServletResponse resp, Object handler) throws Exception {
-        // CORS 预检请求
+        // 1) CORS 预检：放行（返回 true 让链路继续也可以；你现在的返回 false 也行）
         if (HttpMethod.OPTIONS.matches(req.getMethod())) {
             setCorsHeaders(req, resp);
             resp.setStatus(HttpStatus.OK.value());
             return false;
         }
 
-        // 白名单放行
+        // 2) 白名单放行
         String uri = req.getRequestURI();
         if (isWhitelisted(uri)) return true;
 
-        // 从 Authorization 取 token（兼容 Bearer 前缀）
+        // 3) 读取并裁剪 Bearer token
         String token = req.getHeader("Authorization");
         if (token == null || token.isBlank()) return unauthorized(req, resp, "Missing Authorization header");
         if (token.regionMatches(true, 0, "Bearer ", 0, 7)) token = token.substring(7).trim();
 
-        // 调用 JWTservice 校验签名 & 过期
         try {
-            Map<String, Object> claims = jwtservice.parseJWTToken(token); // 验证失败会抛 JWTVerificationException
-            req.setAttribute("claims", claims); // 给后续控制器用
-            return true; // ✅ 验证通过，放行
-        } catch (JWTVerificationException e) {
+            // 4) 解析并验证
+            Map<String, Object> claims = jwtservice.parseJWTToken(token);
+
+            // 5) 兼容 userId/id 两种键名，类型可能是 Integer/Long/String
+            Object uidObj = claims.getOrDefault("userId", claims.get("id"));
+            Long uid = null;
+            if (uidObj instanceof Number) uid = ((Number) uidObj).longValue();
+            else if (uidObj instanceof String s && s.matches("\\d+")) uid = Long.valueOf(s);
+
+            String account = String.valueOf(claims.get("account"));
+
+            // 6) 给 Controller 也留一份（可选）
+            req.setAttribute("claims", claims);
+
+            // 7) **关键：写入 ThreadLocal，供 Service 层使用**
+            org.help789.mds.Utils.ThreadLocalUtil.setClaim(
+                    org.help789.mds.Utils.ThreadLocalUtil.createUserInfoClaim(uid, account)
+            );
+
+            return true;
+        } catch (com.auth0.jwt.exceptions.JWTVerificationException e) {
             return unauthorized(req, resp, "Invalid or expired token");
         } catch (Exception e) {
             return unauthorized(req, resp, "Token verification error");
         }
+    }
+
+    // **新增：请求结束清理 ThreadLocal，防止线程复用串号**
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
+        org.help789.mds.Utils.ThreadLocalUtil.clear();
     }
 
     private boolean isWhitelisted(String uri) {

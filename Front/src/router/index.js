@@ -4,6 +4,7 @@ import HealthRecordShow from '@/views/HealthRecordShow.vue'
 import Analysis from '@/views/AnalysisPage.vue'
 import Visual from "@/views/Visual.vue";
 import PermissionManagement from "@/views/PermissionManagementPage.vue";
+import AuditLogTable from "@/views/AuditLogTable.vue";
 
 const routes = [
     { path: '/', redirect: '/login' },
@@ -16,7 +17,8 @@ const routes = [
     { path: '/:pathMatch(.*)*', redirect: '/login' },
     { path: '/analysis', component: Analysis},
     { path: '/visual', component: Visual},
-    { path: '/permissionManagement', component: PermissionManagement}
+    { path: '/permissionManagement', component: PermissionManagement},
+    { path: '/auditLogs', component: AuditLogTable }
 
 ]
 

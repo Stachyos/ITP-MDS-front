@@ -2,46 +2,29 @@ package org.help789.mds.Entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-
 import java.time.LocalDateTime;
 
-@Entity
-@Table(
-        name = "audit_logs",
-        indexes = {
-                @Index(name = "idx_audit_time", columnList = "event_time"),
-                @Index(name = "idx_audit_operator", columnList = "operator_username")
-        }
-)
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@Entity
+@Table(name = "Auditlog")
 public class AuditLog {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "log_id")
-    private Long logId;
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    /**
-     * 事件时间：数据库默认 CURRENT_TIMESTAMP，这里也自动填充
-     */
-    @CreationTimestamp
-    @Column(name = "event_time", nullable = false)
-    private LocalDateTime eventTime;
+    private Long userId;             // 谁
+    private String userAccount;
 
-    /**
-     * 操作人用户名（与 users.account/real_name 任选其一保持一致即可）
-     */
-    @Column(name = "operator_username", nullable = false, length = 100)
-    private String operatorUsername;
+    private String action;           // 操作名（注解 value）
+    @Column(columnDefinition = "TEXT")
+    private String detail;           // 详情（SpEL 渲染的文案）
 
-    /**
-     * 做了什么事情
-     */
-    @Lob
-    @Column(name = "action", nullable = false)
-    private String action;
+    private Boolean success;         // 是否成功
+    @Column(columnDefinition = "TEXT")
+    private String errorMsg;         // 异常摘要（失败时）
+
+    private LocalDateTime time;      // 发生时间
 }

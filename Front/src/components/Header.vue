@@ -17,11 +17,11 @@
           <el-menu-item index="2-2">Display</el-menu-item>
         </el-sub-menu>
         <el-menu-item index="3">Permission Management</el-menu-item>
+        <el-menu-item index="4">Audit Logs</el-menu-item> <!-- ✅ 新增 -->
       </el-menu>
     </div>
 
     <div class="header-right">
-
       <el-dropdown trigger="click" class="user-dropdown">
         <span class="el-dropdown-link">
           <el-avatar :size="32" :src="avatarUrl" class="user-avatar" />
@@ -50,9 +50,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  Bell,
   User,
-  Message,
   SwitchButton,
   ArrowDown
 } from '@element-plus/icons-vue'
@@ -67,7 +65,8 @@ const menuRoutes = {
   '1': '/HealthRecordShow',
   '2-1': '/analysis',
   '2-2': '/visual',
-  '3': '/permissionManagement'
+  '3': '/permissionManagement',
+  '4': '/auditLogs'  // ✅ 新增日志页面路由
 }
 
 const handleSelect = (key) => {
@@ -79,10 +78,8 @@ const handleSelect = (key) => {
 }
 
 const handleLogout = () => {
-  // 清除登录状态
   localStorage.removeItem('auth_token')
   sessionStorage.removeItem('auth_token')
-  // 跳转到登录页
   router.push('/login')
 }
 </script>
@@ -122,10 +119,7 @@ const handleLogout = () => {
   border-bottom: none;
 }
 
-:deep(.nav-menu .el-sub-menu__title) {
-  border-bottom: none !important;
-}
-
+:deep(.nav-menu .el-sub-menu__title),
 :deep(.nav-menu .el-menu-item) {
   border-bottom: none !important;
 }
@@ -134,10 +128,6 @@ const handleLogout = () => {
   display: flex;
   align-items: center;
   gap: 20px;
-}
-
-.notification-badge {
-  cursor: pointer;
 }
 
 .user-dropdown {

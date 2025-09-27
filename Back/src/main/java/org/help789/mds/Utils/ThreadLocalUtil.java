@@ -8,79 +8,67 @@ import java.util.Map;
 @Slf4j
 public class ThreadLocalUtil {
 
-    //ThreadLocal会自动为每个使用该变量的线程提供独立的变量副本
-    private static final ThreadLocal THREAD_LOCAL = new ThreadLocal();
+    // 每个线程独立存一份 Map<String, Object>
+    private static final ThreadLocal<Map<String, Object>> THREAD_LOCAL = new ThreadLocal<>();
 
-    public static Map<String, Object> createUserInfoClaim(Integer id, String name){
-        Map<String, Object> claims = new HashMap<String, Object>();
+    /**
+     * 创建用户信息 Map
+     */
+    public static Map<String, Object> createUserInfoClaim(Long id, String account) {
+        Map<String, Object> claims = new HashMap<>();
         claims.put("id", id);
-        claims.put("name", name);
-        return claims;
-    }
-
-    private static <T> T get(){
-        return (T) THREAD_LOCAL.get();
-    }
-
-    private static Map<String, Object> getOrCreate(){
-        Map<String, Object> claims = get();
-        if(claims == null){
-            claims = new HashMap<String, Object>();
-            set(claims);
-        }
+        claims.put("account", account);
         return claims;
     }
 
     /**
-     * 获取当前用户ID
-     * @return
+     * 获取当前线程的 claims，没有则新建
      */
-    public static Integer getCurrentUserId(){
-        Map<String, Object> claims = get();
-        int userId = Integer.MIN_VALUE;
-        try {
-            userId = (int) claims.get("id");
-        }catch (Exception e){
-            log.warn("未能获取到当前登录用户ID: {}", e.getMessage());
+    private static Map<String, Object> getOrCreate() {
+        Map<String, Object> claims = THREAD_LOCAL.get();
+        if (claims == null) {
+            claims = new HashMap<>();
+            THREAD_LOCAL.set(claims);
         }
-        return userId;
+        return claims;
     }
 
     /**
-     * 获取当前用户账户名
-     * @return
+     * 设置 claims（合并/覆盖）
      */
-    public static String getCurrentUserName(){
-        Map<String, Object> claims = get();
-        String userName = null;
-        try {
-            userName = (String) claims.get("name");
-        }catch (Exception e){
-            log.warn("未能获取到当前登录用户名称: {}", e.getMessage());
-        }
-        return userName;
-    }
-
-    private static void set(Object vlue){
-        THREAD_LOCAL.set(vlue);
-    }
-
-    /**
-     * 合并/覆盖
-     * @param claims2
-     */
-    public static void setClaim(Map<String, Object> claims2){
+    public static void setClaim(Map<String, Object> claims2) {
         Map<String, Object> claims1 = getOrCreate();
-        for (String k : claims2.keySet()) {
-            claims1.put(k, claims2.get(k));
+        claims1.putAll(claims2);
+    }
+
+    /**
+     * 获取当前用户 ID
+     */
+    public static Long getCurrentUserId() {
+        Map<String, Object> claims = getOrCreate();
+        Object id = claims.get("id");
+        if (id instanceof Long) {
+            return (Long) id;
+        } else if (id instanceof Integer) {
+            return ((Integer) id).longValue();
+        } else {
+            return null; // 没有或者类型不对
         }
     }
 
     /**
-     * 使用完后必须删除，避免线程复用时访问到上一次的数据
-     * 在请求完成的拦截器中调用
+     * 获取当前用户账号
      */
-    public static void clear(){
+    public static String getCurrentUserAccount() {
+        Map<String, Object> claims = getOrCreate();
+        Object account = claims.get("account");
+        return account instanceof String ? (String) account : null;
+    }
+
+    /**
+     * 清理 ThreadLocal，避免内存泄漏
+     */
+    public static void clear() {
         THREAD_LOCAL.remove();
     }
 }

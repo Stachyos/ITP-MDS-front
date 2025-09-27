@@ -6,6 +6,7 @@ import org.help789.mds.Entity.Vo.HealthRecordShowVo;
 import org.help789.mds.Service.HealthRecordShowService;
 import org.help789.mds.Utils.pojo.ImportResult;
 import org.help789.mds.Utils.pojo.Result;
+import org.help789.mds.logging.LogAction;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,10 +20,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class HealthRecordShowController {
 
-    /** 注意：要用 final，配合 @RequiredArgsConstructor 才会注入 */
     private final HealthRecordShowService healthRecordService;
 
     /** 展示全部 => GET /HealthRecordShow/getAll */
+    @LogAction(value = "health-record:list", detail = "scope=all")
     @GetMapping("/getAll")
     public Result<List<HealthRecordShowVo>> getAll() {
         try {
@@ -34,6 +35,10 @@ public class HealthRecordShowController {
     }
 
     /** 新增 => POST /HealthRecordShow/create */
+    @LogAction(
+            value = "health-record:create",
+            detail = "name=#{#body?.name},sex=#{#body?.sex?:'未知'},age=#{#body?.age?:-1}"
+    )
     @PostMapping("/create")
     public Result<HealthRecordShowVo> create(@RequestBody HealthRecordShowVo body) {
         try {
@@ -45,6 +50,10 @@ public class HealthRecordShowController {
     }
 
     /** 修改（按ID覆盖更新） => PUT /HealthRecordShow/update/{id} */
+    @LogAction(
+            value = "health-record:update",
+            detail = "id=#{#id},name=#{#body?.name?:'-'},age=#{#body?.age?:-1}"
+    )
     @PutMapping("/update/{id}")
     public Result<HealthRecordShowVo> update(@PathVariable("id") Long id,
                                              @RequestBody HealthRecordShowVo body) {
@@ -58,27 +67,25 @@ public class HealthRecordShowController {
     }
 
     /** 删除 => DELETE /HealthRecordShow/delete/{id} */
+    @LogAction(value = "health-record:delete", detail = "id=#{#id}")
     @DeleteMapping("/delete/{id}")
     public Result<Long> delete(@PathVariable("id") Long id) {
         try {
             healthRecordService.delete(id);
-            return Result.success("deleted", id); // 返回被删除的ID
+            return Result.success("deleted", id);
         } catch (Exception e) {
             return Result.failed(e.getMessage());
         }
     }
 
-    /**
-     * 下载健康数据 Excel 模板
-     * GET /api/HealthRecordShow/downloadTemplate
-     */
+    /** 下载健康数据 Excel 模板 => GET /api/HealthRecordShow/downloadTemplate */
+    @LogAction(value = "health-record:download-template", detail = "file=健康数据模板.xlsx")
     @GetMapping("/downloadTemplate")
     public void downloadTemplate(HttpServletResponse response) {
         String filename = "健康数据模板.xlsx";
         try {
             response.setContentType(
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-            // 兼容中文文件名
             String encoded = URLEncoder.encode(filename, StandardCharsets.UTF_8)
                     .replaceAll("\\+", "%20");
             response.setHeader("Content-Disposition",
@@ -87,16 +94,15 @@ public class HealthRecordShowController {
             healthRecordService.writeTemplate(response.getOutputStream());
             response.flushBuffer();
         } catch (Exception e) {
-            // 如果需要返回 JSON 错误，可以在这里重置响应并写入 Result，但下载场景通常直接抛错即可。
             throw new RuntimeException("模板下载失败", e);
         }
     }
 
-    /**
-     * 批量导入：支持 CSV / Excel / JSON
-     * 例：POST /api/HealthRecordShow/import?format=excel
-     * form-data: file=<上传文件>
-     */
+    /** 批量导入 => POST /api/HealthRecordShow/import */
+    @LogAction(
+            value = "health-record:import",
+            detail = "file=#{#file?.originalFilename?:'-'},size=#{#file?.size?:0},format=#{#format?:'auto'}"
+    )
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<ImportResult> importData(@RequestPart("file") MultipartFile file,
                                            @RequestParam(value = "format", required = false) String format) {

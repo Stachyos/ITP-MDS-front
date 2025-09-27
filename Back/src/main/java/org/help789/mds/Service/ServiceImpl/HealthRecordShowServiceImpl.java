@@ -8,6 +8,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.help789.mds.Service.HealthRecordShowService;
 import org.help789.mds.Entity.Vo.HealthRecordShowVo;
 import org.help789.mds.Entity.HealthRecord;
+import org.help789.mds.Utils.ThreadLocalUtil;
 import org.help789.mds.Utils.pojo.ImportResult;
 import org.help789.mds.repository.HealthRecordRepository;
 import org.springframework.stereotype.Service;

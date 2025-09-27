@@ -30,10 +30,19 @@
           </div>
         </div>
 
-        <!-- 数据表（直接展示主要字段） -->
+        <!-- 导入进度条 -->
+        <el-progress
+            v-if="showProgress"
+            :percentage="importProgress"
+            :stroke-width="18"
+            status="success"
+            style="margin-bottom: 10px;"
+        />
+
+        <!-- 数据表（前端分页后仅渲染当前页） -->
         <el-table
             v-loading="loading"
-            :data="filteredList"
+            :data="pagedList"
             border
             style="width: 100%"
             highlight-current-row
@@ -65,9 +74,24 @@
             <template #default="{ row }">
               <el-button size="small" type="primary" plain @click.stop="openEdit(row)">编辑</el-button>
               <el-button size="small" type="danger"  plain @click.stop="deleteRow(row)">删除</el-button>
+              <el-button size="small" plain @click.stop="exportOnePDF(row)">生成</el-button>
             </template>
           </el-table-column>
         </el-table>
+
+        <!-- 分页 -->
+        <div style="margin-top: 12px; text-align: right;">
+          <el-pagination
+              background
+              layout="total, sizes, prev, pager, next, jumper"
+              :total="filteredTotal"
+              :current-page="page"
+              :page-size="pageSize"
+              :page-sizes="[10, 20, 50, 100]"
+              @current-change="onPageChange"
+              @size-change="onPageSizeChange"
+          />
+        </div>
       </div>
     </div>
 
@@ -141,6 +165,7 @@
         <el-button type="primary" :loading="saving" @click="submitForm">保 存</el-button>
       </template>
     </el-dialog>
+
     <!-- 导入调试信息 -->
     <el-dialog v-model="showImportDetail" title="导入调试信息" width="680px">
       <el-descriptions :column="2" border v-if="importSummary">
@@ -180,7 +205,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'        // 👈 补上 watch
+import axios from 'axios'                                    // 👈 补上 axios
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Header from '@/components/Header.vue'
 import {
@@ -191,13 +217,38 @@ import {
   downloadHealthRecordTemplate,
   importHealthRecords
 } from '@/api/HealthRecordShow.js'
+import { assessMetrics } from '@/utils/health/assess.js'
+
+
 
 const loading = ref(false)
+const importProgress = ref(0)        // 进度百分比
+const showProgress   = ref(false)    // 控制进度条显示
 const saving  = ref(false)
 const downloading = ref(false)
 
 const list    = ref([])
 const keyword = ref('')
+
+// 先定义 filteredList，后面分页计算才不会引用未定义
+const filteredList = computed(() => {
+  const kw = (keyword.value || '').trim().toLowerCase()
+  if (!kw) return list.value
+  return list.value.filter(r => String(r.name || '').toLowerCase().includes(kw))
+})
+
+const page = ref(1)
+const pageSize = ref(20)
+const filteredTotal = computed(() => filteredList.value.length)
+const pagedList = computed(() => {
+  const start = (page.value - 1) * pageSize.value
+  return filteredList.value.slice(start, start + pageSize.value)
+})
+const onPageChange = (p) => { page.value = p }
+const onPageSizeChange = (s) => { page.value = 1; pageSize.value = s }
+watch(keyword, () => { page.value = 1 })
+
+const CACHE_KEY = 'health_records_cache_v1'
 
 const formVisible = ref(false)
 const isEdit      = ref(false)
@@ -243,17 +294,20 @@ const copyRaw = async () => {
   catch { ElMessage.error('复制失败') }
 }
 
-const filteredList = computed(() => {
-  const kw = (keyword.value || '').trim().toLowerCase()
-  if (!kw) return list.value
-  return list.value.filter(r => String(r.name || '').toLowerCase().includes(kw))
-})
-
 const fetchList = async () => {
+  // 先尝试从缓存拿，提升首屏
+  const cached = sessionStorage.getItem(CACHE_KEY)
+  if (cached) {
+    try {
+      list.value = JSON.parse(cached)
+    } catch {}
+  }
+
   loading.value = true
   try {
     const res = await getAllHealthRecords()
     list.value = res.data || []
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(list.value))
   } catch (err) {
     ElMessage.error(err?.message || '加载失败')
   } finally {
@@ -328,9 +382,8 @@ const deleteRow = async (row) => {
 const downloadTemplate = async () => {
   try {
     downloading.value = true
-    const blob = await downloadHealthRecordTemplate() // 这里就是 Blob
+    const blob = await downloadHealthRecordTemplate()
 
-    // 如果后端返的是 JSON 错误，这里 type 往往是 application/json
     if (blob && blob.type && blob.type.includes('json')) {
       const text = await blob.text()
       try {
@@ -356,70 +409,57 @@ const downloadTemplate = async () => {
     downloading.value = false
   }
 }
+
 // 选择文件后上传导入
 const onFileChange = async (e) => {
   const file = e.target.files && e.target.files[0]
-  e.target.value = '' // 允许同一文件反复选择
+  e.target.value = ''
   if (!file) return
 
   const format = inferFormatByExt(file.name)
-  console.groupCollapsed('[导入] 请求参数')
-  console.log('file:', file)
-  console.log('infer format:', format)
-  console.groupEnd()
 
   try {
     importing.value = true
+    importProgress.value = 0
+    showProgress.value = true
 
-    const resp = await importHealthRecords(file, format)
-    const body = resp.data || resp || {} // 你的 request 可能做了解包
+    const formData = new FormData()
+    formData.append('file', file)
+    if (format) formData.append('format', format)
 
-    // 调试：完整打印
-    console.groupCollapsed('[导入] 原始响应')
-    console.log('resp:', resp)
-    console.log('body:', body)
-    console.groupEnd()
+    const resp = await axios.post('/api/HealthRecordShow/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          importProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        }
+      }
+    })
 
-    // 调试面板赋值
+    const body = resp.data || {}
     rawImportResp.value = JSON.stringify(body, null, 2)
     importSummary.value = body?.data || null
     showImportDetail.value = true
 
-    // 业务提示
-    if (body.reply) {
-      const s = body.data || {}
-      const msg = `导入完成：共${s.totalRows ?? 0}，入库${s.saved ?? 0}，去重${s.deduplicated ?? 0}，缺关键${s.skippedMissingKey ?? 0}，异常${s.skippedAbnormal ?? 0}`
-      ElMessage.success(msg)
-      fetchList()
-    } else {
-      ElMessage.error(body.message || '导入失败')
-    }
+    ElMessage.success('导入完成')
+    fetchList()
   } catch (err) {
-    // 把错误也放到调试弹窗
-    const errObj = {
-      message: err?.message,
-      response: err?.response?.data || null,
-      stack: err?.stack?.split('\n').slice(0,3).join('\n')
-    }
-    rawImportResp.value = JSON.stringify(errObj, null, 2)
-    importSummary.value = null
+    rawImportResp.value = JSON.stringify(err?.response?.data || err, null, 2)
     showImportDetail.value = true
-
-    ElMessage.error(err?.response?.data?.message || err?.message || '导入失败')
+    ElMessage.error(err?.message || '导入失败')
   } finally {
     importing.value = false
+    setTimeout(() => { showProgress.value = false }, 800)
   }
 }
+
 // === 导出：点击主按钮先询问 ===
 const chooseExportVisible = ref(false)
-
 const onExportClick = () => {
   if (loading.value) return
-  // 打开“选择导出格式”的弹窗
   chooseExportVisible.value = true
 }
 
-// 也复用下拉命令的处理（弹窗和下拉共用同一入口）
 const onExportCommand = async (cmd) => {
   chooseExportVisible.value = false
   if (!filteredList.value?.length) {
@@ -445,7 +485,7 @@ const ts = () => {
 const EXPORT_COLUMNS = [
   { key: 'recordId',         title: 'ID' },
   { key: 'name',             title: 'Name/Label' },
-  { key: 'sex',              title: 'Gender', format: mapSex },              // ← 加上 format
+  { key: 'sex',              title: 'Gender', format: mapSex },
   { key: 'age',              title: 'Age' },
   { key: 'totalCholesterol', title: 'Total Cholesterol' },
   { key: 'triglyceride',     title: 'Triglycerides' },
@@ -454,20 +494,18 @@ const EXPORT_COLUMNS = [
   { key: 'vldlC',            title: 'VLDL-C' },
   { key: 'pulse',            title: 'Pulse' },
   { key: 'diastolicBp',      title: 'Diastolic BP' },
-  { key: 'hypertensionHistory', title: 'Hypertension History', format: mapYesNo }, // ← 加上 format
+  { key: 'hypertensionHistory', title: 'Hypertension History', format: mapYesNo },
   { key: 'bun',              title: 'Blood Urea Nitrogen (BUN)' },
   { key: 'uricAcid',         title: 'Uric Acid' },
   { key: 'creatinine',       title: 'Creatinine' },
 ]
 
-// 2) 映射函数（兼容中英文/布尔/数字）
 function mapSex(v) {
   const s = String(v ?? '').trim().toLowerCase()
   if (['男','m','male','man','1'].includes(s)) return 'Male'
   if (['女','f','female','woman','0'].includes(s)) return 'Female'
   if (['其他','other'].includes(s)) return 'Other'
   if (['未知','unknown','unk',''].includes(s)) return 'Unknown'
-  // 兜底：原样返回（避免误伤）
   return v ?? ''
 }
 
@@ -476,17 +514,14 @@ function mapYesNo(v) {
   const s = String(v ?? '').trim().toLowerCase()
   if (['是','yes','y','true','1'].includes(s)) return 'Yes'
   if (['否','no','n','false','0'].includes(s)) return 'No'
-  // 兜底：原样返回
   return v ?? ''
 }
 
-// 3) 导出用的数据行构建（调用 format）
 const buildRows = () => {
   return filteredList.value.map(row => {
     const obj = {}
     for (const c of EXPORT_COLUMNS) {
       const raw = row?.[c.key]
-      // 先处理你之前的高血压史布尔 -> 中英文，此处改为统一走 format
       const val = typeof c.format === 'function' ? c.format(raw, row) : (raw ?? '')
       obj[c.title] = val
     }
@@ -494,13 +529,11 @@ const buildRows = () => {
   })
 }
 
-// CSV 导出（原生，无需第三方库）
 const exportCSV = async () => {
   const rows = buildRows()
   const headers = Object.keys(rows[0] || EXPORT_COLUMNS.reduce((acc, c) => (acc[c.title]='', acc), {}))
   const esc = (s) => {
     const str = String(s ?? '')
-    // 若包含逗号/引号/换行，按 CSV 规范转义
     if (/[",\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`
     return str
   }
@@ -520,10 +553,9 @@ const exportCSV = async () => {
   ElMessage.success('CSV 导出完成')
 }
 
-// Excel 导出（需要 xlsx 依赖）
 const exportXLSX = async () => {
   try {
-    const xlsx = await import('xlsx')  // 动态导入
+    const xlsx = await import('xlsx')
     const rows = buildRows()
     const ws = xlsx.utils.json_to_sheet(rows)
     const wb = xlsx.utils.book_new()
@@ -531,25 +563,19 @@ const exportXLSX = async () => {
     xlsx.writeFile(wb, `HealthRecords_${ts()}.xlsx`)
     ElMessage.success('Excel 导出完成')
   } catch (e) {
-    // 未安装时给出指引
     ElMessage.error('未检测到 xlsx 依赖，请先安装：npm i xlsx')
     throw e
   }
 }
 
-// PDF 导出（推荐 jspdf + jspdf-autotable）
 const exportPDF = async () => {
   try {
     const jsPDF = (await import('jspdf')).default
     let autoTable
     try {
       autoTable = (await import('jspdf-autotable')).default
-    } catch {
-      // 允许缺少 autotable，但体验会差
-    }
-
+    } catch {}
     const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
-
     doc.setFontSize(16)
     doc.text('健康数据记录导出', 40, 40)
 
@@ -565,7 +591,6 @@ const exportPDF = async () => {
         headStyles: { fontStyle: 'bold' }
       })
     } else {
-      // 简单兜底：逐行打印（列多时可能溢出）
       doc.setFontSize(10)
       let y = 60
       doc.text(headers.join(' | '), 40, y)
@@ -576,11 +601,178 @@ const exportPDF = async () => {
         if (y > 560) { doc.addPage(); y = 40 }
       })
     }
-
     doc.save(`HealthRecords_${ts()}.pdf`)
     ElMessage.success('PDF 导出完成')
   } catch (e) {
     ElMessage.error('PDF 导出失败，如需表格排版请安装：npm i jspdf jspdf-autotable')
+    throw e
+  }
+}
+
+// —— 单条导出：把一条 row 映射为导出行（复用 EXPORT_COLUMNS + format）
+const buildOneRow = (row) => {
+  const obj = {}
+  for (const c of EXPORT_COLUMNS) {
+    const raw = row?.[c.key]
+    const val = typeof c.format === 'function' ? c.format(raw, row) : (raw ?? '')
+    obj[c.title] = val
+  }
+  return obj
+}
+// — Polished PDF (info card + metrics table + footer page numbers)
+// — Polished PDF (info card + assessment table + raw table + footer page numbers)
+const exportOnePDF = async (row) => {
+  try {
+    const jsPDF = (await import('jspdf')).default
+    let autoTable
+    try { autoTable = (await import('jspdf-autotable')).default } catch {}
+
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
+    const margin = { left: 56, right: 56, top: 68, bottom: 56 }
+    const pageWidth  = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+
+    // Title
+    doc.setFontSize(18)
+    doc.text('Personal Health Record', margin.left, margin.top)
+
+    // Divider
+    const lineY = margin.top + 14
+    doc.setDrawColor(230)
+    doc.line(margin.left, lineY, pageWidth - margin.right, lineY)
+
+    // Info card
+    const infoY = lineY + 18
+    doc.setFontSize(12)
+    const safe = (v) => (v ?? '-') + ''
+    const leftX  = margin.left
+    const rightX = pageWidth / 2
+
+    // 若你已定义了 mapSex，可替换为统一显示；否则仍用原值
+    const genderText = (typeof mapSex === 'function') ? mapSex(row.sex) : safe(row.sex)
+
+    doc.text(`Name: ${safe(row.name)}`,       leftX,  infoY)
+    doc.text(`Gender: ${genderText}`,         leftX,  infoY + 18)
+    doc.text(`Age: ${safe(row.age)}`,         leftX,  infoY + 36)
+    doc.text(`Record ID: ${safe(row.recordId)}`, rightX, infoY)
+    doc.text(`Exported at: ${new Date().toLocaleString()}`, rightX, infoY + 18)
+
+    // ========= Section 1: Health Assessment（评估表）=========
+    let y = infoY + 56
+    doc.setFontSize(14)
+    doc.text('Health Assessment', margin.left, y)
+    y += 8
+    doc.setDrawColor(240)
+    doc.line(margin.left, y, pageWidth - margin.right, y)
+    y += 10
+
+    const metrics = assessMetrics(row) // [{ item, valueStr, statusText, statusColor }...]
+    const assessHead = ['Item', 'Value', 'Status']
+
+    if (autoTable) {
+      autoTable(doc, {
+        head: [assessHead],
+        body: metrics.map(m => [m.item, m.valueStr, m.statusText]),
+        startY: y,
+        margin,
+        styles: { fontSize: 11, cellPadding: 6, overflow: 'linebreak', lineColor: 230, lineWidth: 0.5 },
+        headStyles: { fillColor: [64, 158, 255], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: {
+          0: { cellWidth: 180 },   // Item
+          1: { cellWidth: 120 },   // Value
+          2: { cellWidth: 'auto' } // Status
+        },
+        // 给 Status 列按评估颜色上色
+        didParseCell: (data) => {
+          const { section, column, row, cell } = data
+          if (section === 'body' && column.index === 2) {
+            const m = metrics[row.index]
+            if (m?.statusColor?.length === 3) {
+              cell.textColor = m.statusColor
+              cell.styles.fontStyle = 'bold'
+            }
+          }
+        },
+        didDrawPage: () => {
+          const page  = doc.internal.getCurrentPageInfo().pageNumber
+          const total = doc.getNumberOfPages()
+          doc.setFontSize(10); doc.setTextColor(130)
+          doc.text(`Page ${page} of ${total}`, pageWidth - margin.right, pageHeight - 26, { align: 'right' })
+          doc.setTextColor(0,0,0) // 恢复默认颜色
+        },
+      })
+      y = doc.lastAutoTable ? doc.lastAutoTable.finalY + 24 : (y + 24)
+    } else {
+      // 无 autotable 的兜底渲染
+      doc.setFontSize(12)
+      let yy = y
+      doc.text(assessHead.join(' | '), margin.left, yy); yy += 18
+      doc.setFontSize(11)
+      metrics.forEach((m) => {
+        const left = `${m.item} | ${m.valueStr} | `
+        doc.setTextColor(0,0,0)
+        doc.text(left, margin.left, yy)
+        const sx = margin.left + doc.getTextWidth(left)
+        const [r,g,b] = m.statusColor || [0,0,0]
+        doc.setTextColor(r,g,b)
+        doc.text(String(m.statusText || ''), sx, yy)
+        yy += 16
+        if (yy > pageHeight - margin.bottom) { doc.addPage(); yy = margin.top }
+      })
+      doc.setTextColor(0,0,0)
+      y = yy + 24
+    }
+
+    // ========= Section 2: Raw Values（原始值表）=========
+    doc.setFontSize(14)
+    doc.text('Raw Values', margin.left, y)
+    y += 8
+    doc.setDrawColor(240)
+    doc.line(margin.left, y, pageWidth - margin.right, y)
+    y += 10
+
+    const r = buildOneRow(row) // 复用你已有的函数：将该条数据映射为 {Title: value}
+    const rawBody = Object.entries(r).map(([k, v]) => [k, String(v ?? '')])
+    const rawHead = ['Item', 'Value']
+
+    if (autoTable) {
+      autoTable(doc, {
+        head: [rawHead],
+        body: rawBody,
+        startY: y,
+        margin,
+        styles: { fontSize: 11, cellPadding: 6, overflow: 'linebreak', lineColor: 230, lineWidth: 0.5 },
+        headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: { 0: { cellWidth: 220 }, 1: { cellWidth: 'auto' } },
+        didDrawPage: () => {
+          const page  = doc.internal.getCurrentPageInfo().pageNumber
+          const total = doc.getNumberOfPages()
+          doc.setFontSize(10); doc.setTextColor(130)
+          doc.text(`Page ${page} of ${total}`, pageWidth - margin.right, pageHeight - 26, { align: 'right' })
+          doc.setTextColor(0,0,0)
+        },
+      })
+    } else {
+      doc.setFontSize(11)
+      let yy = y
+      doc.text(rawHead.join(' | '), margin.left, yy); yy += 16
+      rawBody.forEach((row2) => {
+        doc.setTextColor(0,0,0)
+        doc.text(row2.join(' : '), margin.left, yy)
+        yy += 14
+        if (yy > pageHeight - margin.bottom) { doc.addPage(); yy = margin.top }
+      })
+      doc.setTextColor(0,0,0)
+    }
+
+    // Save
+    const base = `HealthRecord_${(row.name ?? 'one')}_${row.recordId || 'one'}_${ts()}`
+    doc.save(`${base}.pdf`)
+    ElMessage.success('Single-record PDF exported')
+  } catch (e) {
+    ElMessage.error('PDF export failed. For table layout, please install: npm i jspdf jspdf-autotable')
     throw e
   }
 }
@@ -597,13 +789,14 @@ onMounted(fetchList)
 .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .title { font-size: 18px; font-weight: 600; }
 .ops { display: flex; gap: 10px; align-items: center; }
+
 /* 右下角主按钮 */
 .export-fab {
   position: fixed;
   right: calc(24px + env(safe-area-inset-right));
   bottom: calc(24px + env(safe-area-inset-bottom));
-  z-index: 4000;               /* 高于大多数 Element Plus 弹层 */
-  background: #409eff;         /* Element Plus 主色 */
+  z-index: 4000;
+  background: #409eff;
   color: #fff;
   padding: 12px 16px;
   border-radius: 999px;
@@ -623,41 +816,11 @@ onMounted(fetchList)
   box-shadow: 0 6px 18px rgba(0,0,0,.12);
 }
 
-/* 三点菜单的悬浮定位（可选） */
-.export-fab-menu {
-  position: fixed;
-  right: calc(24px + env(safe-area-inset-right));
-  bottom: calc(84px + env(safe-area-inset-bottom)); /* 与主按钮竖直错开 */
-  z-index: 4000;
-}
-.export-fab-menu__trigger {
-  width: 42px;
-  height: 42px;
-  line-height: 42px;
-  display: inline-block;
-  text-align: center;
-  border-radius: 50%;
-  background: #fff;
-  border: 1px solid #ebeef5;
-  box-shadow: 0 6px 18px rgba(0,0,0,.08);
-  cursor: pointer;
-  font-weight: 700;
-  font-size: 18px;
-}
-.export-fab-menu__trigger:hover {
-  box-shadow: 0 10px 24px rgba(0,0,0,.12);
-}
-
-/* 小屏适配：离边距更近一点 */
+/* 小屏适配 */
 @media (max-width: 768px) {
   .export-fab {
     right: calc(16px + env(safe-area-inset-right));
     bottom: calc(16px + env(safe-area-inset-bottom));
   }
-  .export-fab-menu {
-    right: calc(16px + env(safe-area-inset-right));
-    bottom: calc(72px + env(safe-area-inset-bottom));
-  }
 }
-
 </style>
