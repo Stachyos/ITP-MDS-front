@@ -1,6 +1,5 @@
 package org.help789.mds.Controller;
 
-
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -10,6 +9,7 @@ import org.help789.mds.Service.EmailCodeService;
 import org.help789.mds.Service.MailSenderService;
 import org.help789.mds.Service.UserService;
 import org.help789.mds.Utils.pojo.Result;
+import org.help789.mds.logging.LogAction;           // ✅ 新增
 import org.help789.mds.repository.UserRepository;
 import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
@@ -30,6 +30,10 @@ public class UserController {
     private UserRepository userRepository;
 
     // 账号密码登录（form-urlencoded）
+    @LogAction(
+            value = "user:login",
+            detail = "account=#{#account},remember=#{#remember?:false}"
+    )
     @PostMapping(
             value = "/login",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
@@ -40,10 +44,15 @@ public class UserController {
             @RequestParam String password,
             @RequestParam(required = false, defaultValue = "true") Boolean remember
     ) {
+        // ⚠️ 不记录 password
         return userService.loginBySecretWithPassword(account, password);
     }
 
     // 发送验证码（form-urlencoded）
+    @LogAction(
+            value = "user:send-code",
+            detail = "email=#{#email},ip=#{#req?.getHeader('X-Forwarded-For')?:#req?.getHeader('X-Real-IP')?:#req?.getRemoteAddr()}"
+    )
     @PostMapping(
             value = "/send-email-code",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
@@ -72,8 +81,10 @@ public class UserController {
         }
     }
 
-
-
+    @LogAction(
+            value = "user:login-email",
+            detail = "email=#{#email},codeLen=#{#code?.length()?:0}"
+    )
     @PostMapping(
             value = "/login-email",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
@@ -81,9 +92,9 @@ public class UserController {
     )
     public Result<String> loginEmailForm(@RequestParam @Email String email,
                                          @RequestParam String code) {
-        return userService.loginByEmail(email, code); // UserService 返回 Result<String>
+        // ⚠️ 不记录明文 code，只记录长度
+        return userService.loginByEmail(email, code);
     }
-
 
     private String realIp(HttpServletRequest req){
         String xff = req.getHeader("X-Forwarded-For");
@@ -93,12 +104,17 @@ public class UserController {
     }
 
     // 注册（form-urlencoded）— 用 @ModelAttribute 绑定到 VO
+    @LogAction(
+            value = "user:register",
+            detail = "account=#{#req?.account?:'-'},email=#{#req?.email?:'-'}"
+    )
     @PostMapping(
             value = "/register",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public Result<String> registerForm(@Valid RegisterReq req) { // 等价 @ModelAttribute RegisterReq req
-        return userService.register(req); // 你前面已实现，返回 Result<String>
+    public Result<String> registerForm(@Valid RegisterReq req) {
+        // ⚠️ 不记录密码等敏感字段
+        return userService.register(req);
     }
 }

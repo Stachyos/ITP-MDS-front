@@ -6,7 +6,7 @@ import org.help789.mds.Entity.Vo.HealthRecordShowVo;
 import org.help789.mds.Service.HealthRecordShowService;
 import org.help789.mds.Utils.pojo.ImportResult;
 import org.help789.mds.Utils.pojo.Result;
-import org.help789.mds.logging.LogAction;   // ✅ 引入自定义注解
+import org.help789.mds.logging.LogAction;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,7 +23,7 @@ public class HealthRecordShowController {
     private final HealthRecordShowService healthRecordService;
 
     /** 展示全部 => GET /HealthRecordShow/getAll */
-    @LogAction(value = "查询健康数据", detail = "查询所有健康记录")
+    @LogAction(value = "health-record:list", detail = "scope=all")
     @GetMapping("/getAll")
     public Result<List<HealthRecordShowVo>> getAll() {
         try {
@@ -35,7 +35,10 @@ public class HealthRecordShowController {
     }
 
     /** 新增 => POST /HealthRecordShow/create */
-    @LogAction(value = "新增健康数据", detail = "新增记录：#{#body}")
+    @LogAction(
+            value = "health-record:create",
+            detail = "name=#{#body?.name},sex=#{#body?.sex?:'未知'},age=#{#body?.age?:-1}"
+    )
     @PostMapping("/create")
     public Result<HealthRecordShowVo> create(@RequestBody HealthRecordShowVo body) {
         try {
@@ -47,7 +50,10 @@ public class HealthRecordShowController {
     }
 
     /** 修改（按ID覆盖更新） => PUT /HealthRecordShow/update/{id} */
-    @LogAction(value = "修改健康数据", detail = "修改ID=#{#id} 的记录")
+    @LogAction(
+            value = "health-record:update",
+            detail = "id=#{#id},name=#{#body?.name?:'-'},age=#{#body?.age?:-1}"
+    )
     @PutMapping("/update/{id}")
     public Result<HealthRecordShowVo> update(@PathVariable("id") Long id,
                                              @RequestBody HealthRecordShowVo body) {
@@ -61,7 +67,7 @@ public class HealthRecordShowController {
     }
 
     /** 删除 => DELETE /HealthRecordShow/delete/{id} */
-    @LogAction(value = "删除健康数据", detail = "删除ID=#{#id} 的记录")
+    @LogAction(value = "health-record:delete", detail = "id=#{#id}")
     @DeleteMapping("/delete/{id}")
     public Result<Long> delete(@PathVariable("id") Long id) {
         try {
@@ -73,7 +79,7 @@ public class HealthRecordShowController {
     }
 
     /** 下载健康数据 Excel 模板 => GET /api/HealthRecordShow/downloadTemplate */
-    @LogAction(value = "下载健康数据模板")
+    @LogAction(value = "health-record:download-template", detail = "file=健康数据模板.xlsx")
     @GetMapping("/downloadTemplate")
     public void downloadTemplate(HttpServletResponse response) {
         String filename = "健康数据模板.xlsx";
@@ -93,7 +99,10 @@ public class HealthRecordShowController {
     }
 
     /** 批量导入 => POST /api/HealthRecordShow/import */
-    @LogAction(value = "导入健康数据", detail = "导入文件格式=#{#format}")
+    @LogAction(
+            value = "health-record:import",
+            detail = "file=#{#file?.originalFilename?:'-'},size=#{#file?.size?:0},format=#{#format?:'auto'}"
+    )
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<ImportResult> importData(@RequestPart("file") MultipartFile file,
                                            @RequestParam(value = "format", required = false) String format) {
