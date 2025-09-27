@@ -47,8 +47,8 @@
             style="width: 100%"
             highlight-current-row
         >
-          <el-table-column prop="recordId" label="ID" width="120" />
-          <el-table-column prop="name" label="名称/标签" min-width="160" />
+          <el-table-column prop="recordId" label="ID" width="60" />
+          <el-table-column prop="name" label="名称/标签" min-width="100" />
           <el-table-column prop="sex" label="性别" width="80" />
           <el-table-column prop="age" label="年龄" width="80" />
 
@@ -70,13 +70,16 @@
           <el-table-column prop="uricAcid" label="尿酸" width="100" />
           <el-table-column prop="creatinine" label="肌酐" width="100" />
 
-          <el-table-column label="操作" width="180" fixed="right">
+          <el-table-column label="操作" width="220" fixed="right">
             <template #default="{ row }">
-              <el-button size="small" type="primary" plain @click.stop="openEdit(row)">编辑</el-button>
-              <el-button size="small" type="danger"  plain @click.stop="deleteRow(row)">删除</el-button>
-              <el-button size="small" plain @click.stop="exportOnePDF(row)">生成</el-button>
+              <div class="action-buttons">
+                <el-button size="small" type="primary" plain @click.stop="openEdit(row)">编辑</el-button>
+                <el-button size="small" type="danger" plain @click.stop="deleteRow(row)">删除</el-button>
+                <el-button size="small" plain @click.stop="exportOnePDF(row)">生成</el-button>
+              </div>
             </template>
           </el-table-column>
+
         </el-table>
 
         <!-- 分页 -->
@@ -815,6 +818,13 @@ onMounted(fetchList)
   transform: none;
   box-shadow: 0 6px 18px rgba(0,0,0,.12);
 }
+
+.action-buttons {
+  display: flex;
+  gap: 6px;         /* 按钮间距 */
+  justify-content: center; /* 居中 */
+}
+
 
 /* 小屏适配 */
 @media (max-width: 768px) {
