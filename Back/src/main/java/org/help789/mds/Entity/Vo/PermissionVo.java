@@ -15,9 +15,9 @@ public class PermissionVo {
     private Long userId;                   // 用户ID
     private String account;                // 用户账号
     private String email;                  // 用户邮箱
-    private Boolean accessLogPage;     // 是否可访问病人信息
-    private Boolean accessResearchData;    // 是否可访问科研数据
-    private Boolean moduleReportGeneration;// 是否可使用报告生成模块
-    private Boolean moduleStatsAnalysis;   // 是否可使用统计分析模块
+    private Boolean accessLogPage;
+    private Boolean accessVisualPage;
+    private Boolean accessDisplayPage;
+    private Boolean permissionManagement;
     private Boolean optionEdit;
 }

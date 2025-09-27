@@ -32,18 +32,18 @@ public class Permission {
     @Builder.Default
     private Boolean accessLogPage = false;
 
-    @Column(name = "access_research_data", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    @Column(name = "access_visual_page", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
     @Builder.Default
-    private Boolean accessResearchData = false;
+    private Boolean accessVisualPage = false;
 
     // —— 功能模块 ——
-    @Column(name = "module_stats_analysis", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    @Column(name = "access_display_page", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
     @Builder.Default
-    private Boolean moduleStatsAnalysis = false;
+    private Boolean accessDisplayPage = false;
 
-    @Column(name = "module_report_generation", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    @Column(name = "permission_management", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
     @Builder.Default
-    private Boolean moduleReportGeneration = false;
+    private Boolean permissionManagement = false;
 
     // —— 操作类型 ——
 

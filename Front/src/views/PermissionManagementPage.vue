@@ -22,33 +22,33 @@
         <el-table-column prop="email" label="邮箱" min-width="160" />
 
 
-        <el-table-column prop="accessLogPage" label="查看日志" width="120">
+        <el-table-column prop="optionEdit" label="table action" width="150">
+          <template #default="{ row }">
+            <el-switch v-model="row.optionEdit" />
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="accessLogPage" label="access log" width="150">
           <template #default="{ row }">
             <el-switch v-model="row.accessLogPage" />
           </template>
         </el-table-column>
 
-        <el-table-column prop="accessResearchData" label="科研数据" width="120">
+        <el-table-column prop="accessVisualPage" label="access visual" width="150">
           <template #default="{ row }">
-            <el-switch v-model="row.accessResearchData" />
+            <el-switch v-model="row.accessVisualPage" />
           </template>
         </el-table-column>
 
-        <el-table-column prop="moduleReportGeneration" label="报告生成" width="120">
+        <el-table-column prop="accessDisplayPage" label="access display" width="150">
           <template #default="{ row }">
-            <el-switch v-model="row.moduleReportGeneration" />
+            <el-switch v-model="row.accessDisplayPage" />
           </template>
         </el-table-column>
 
-        <el-table-column prop="moduleStatsAnalysis" label="统计分析" width="120">
+        <el-table-column prop="permissionManagement" label="permission management" width="150">
           <template #default="{ row }">
-            <el-switch v-model="row.moduleStatsAnalysis" />
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="optionEdit" label="编辑表格" width="120">
-          <template #default="{ row }">
-            <el-switch v-model="row.optionEdit" />
+            <el-switch v-model="row.permissionManagement" />
           </template>
         </el-table-column>
 
