@@ -36,13 +36,18 @@ export function downloadHealthRecordTemplate() {
 }
 
 // 导入数据（CSV/Excel/JSON）
-export function importHealthRecords(file, format) {
+export function importHealthRecords(file, format, extraCfg = {}) {
     const form = new FormData()
     form.append('file', file)
-    const url = format ? `/api/HealthRecordShow/import?format=${format}` : `/HealthRecordShow/import`
-    return request.post(url, form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 120000,                // ← 单接口加长
-        onUploadProgress: e => {/* 可选：显示进度 */}
+    if (format) form.append('format', format)
+
+    return request.post('/api/HealthRecordShow/import', form, {
+        timeout: 120000,
+        transformRequest: [(data, headers) => {
+            delete headers['Content-Type']; delete headers['content-type']
+            headers?.setContentType?.(undefined) // 兼容 axios v1
+            return data
+        }],
+        ...extraCfg,
     })
 }
