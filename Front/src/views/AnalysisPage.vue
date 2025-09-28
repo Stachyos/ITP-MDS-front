@@ -37,7 +37,54 @@
       </div>
     </div>
 
+
     <div class="groups" v-loading="loading">
+
+      <div class="group">
+        <div class="group-title">Basic statistics</div>
+
+        <!-- Dropdowns and Stats -->
+        <div class="dropdowns-and-stat">
+          <!-- Variable Dropdown -->
+          <el-select
+              v-model="selectedVariable"
+              size="large"
+              class="ctrl"
+              placeholder="Select Variable（选择变量）"
+              @change="updateStatValue"
+          >
+            <el-option
+                v-for="metric in metrics"
+                :key="metric.key"
+                :label="metric.label"
+                :value="metric.key"
+            />
+          </el-select>
+
+          <!-- Statistics Dropdown -->
+          <el-select
+              v-model="selectedStat"
+              size="large"
+              class="ctrl"
+              placeholder="Select Stat（选择统计数据）"
+              @change="updateStatValue"
+          >
+            <el-option value="mean" label="Mean（均值）" />
+            <el-option value="median" label="Median（中位数）" />
+            <el-option value="mode" label="Mode（众数）" />
+            <el-option value="std" label="Standard Deviation（标准差）" />
+          </el-select>
+
+          <!-- Display Selected Stat Value -->
+          <div class="stat-value-display">
+            <span v-if="selectedStat">Selected Stat: {{ selectedStatValue }}</span>
+          </div>
+        </div>
+      </div>
+
+
+
+
       <!-- 1. A/B Variable Tests -->
       <div class="group">
         <div class="group-title">A/B Variable Tests（A/B 变量选择与检验）</div>
@@ -212,6 +259,9 @@ export default {
 
   data() {
     return {
+      selectedVariable: 'totalCholesterol（总胆固醇）',  // 当前选择的变量（例如总胆固醇）
+      selectedStat: 'mean',  // 默认选择 "均值"
+      selectedStatValue: null,  // 存储选中的统计数据值
       loading: false,
       raw: [],
 
@@ -309,6 +359,62 @@ export default {
   },
 
   methods: {
+
+    updateStatValue() {
+      this.selectedStatValue = this.calculateStat(this.selectedStat);
+    },
+
+    calculateStat(statType) {
+      let value = 0;
+      const filteredData = this.extractVariableData(this.selectedVariable);  // 从 raw 数据中提取选中的变量数据
+      switch (statType) {
+        case 'mean':
+          value = this.mean(filteredData);  // 计算均值
+          break;
+        case 'median':
+          value = this.median(filteredData);  // 计算中位数
+          break;
+        case 'mode':
+          value = this.mode(filteredData);  // 计算众数
+          break;
+        case 'std':
+          value = this.std(filteredData);  // 计算标准差
+          break;
+        default:
+          value = null;
+      }
+      return value;
+    },
+
+
+    // 计算中位数
+    median(arr) {
+      arr.sort((a, b) => a - b);
+      const mid = Math.floor(arr.length / 2);
+      return arr.length % 2 === 0 ? (arr[mid - 1] + arr[mid]) / 2 : arr[mid];
+    },
+
+    // 计算众数
+    mode(arr) {
+      const frequency = {};
+      let maxFreq = 0, modes = [];
+      arr.forEach(num => {
+        frequency[num] = (frequency[num] || 0) + 1;
+        if (frequency[num] > maxFreq) {
+          maxFreq = frequency[num];
+          modes = [num];
+        } else if (frequency[num] === maxFreq) {
+          modes.push(num);
+        }
+      });
+      return modes;
+    },
+
+
+    extractVariableData(variableKey) {
+      return this.filtered().map(r => r[variableKey]).filter(v => typeof v === 'number' && !Number.isNaN(v));
+    },
+
     // ---- API ----
     async fetchAll() {
       this.loading = true
@@ -375,6 +481,8 @@ export default {
     chiSquare(calc){ const {table,rows,cols}=calc; const rS=rows.map((_,i)=>table[i].reduce((a,b)=>a+b,0)); const cS=cols.map((_,j)=>rows.reduce((a,_,i)=>a+table[i][j],0)); const N=rS.reduce((a,b)=>a+b,0); let chi2=0; for(let i=0;i<rows.length;i++){ for(let j=0;j<cols.length;j++){ const exp=(rS[i]*cS[j])/N||0; const obs=table[i][j]; if(exp>0) chi2+=(obs-exp)*(obs-exp)/exp } } const df=(rows.length-1)*(cols.length-1); const z=(chi2-df)/Math.sqrt(2*df||1); const p=1-this.phi(z); return {chi2,df,p} },
 
     // ---- Data extraction ----
+
+
     filtered(){ return this.applyGlobalFilters(this.raw) },
     extractNumPair(aKey,bKey){
       const arr=[]
@@ -1432,4 +1540,26 @@ export default {
   border-radius: 8px;
   font-weight: 500;
 }
+.stat-value-display {
+  font-size: 16px;
+  color: #334155;
+  margin-top: 8px;
+  font-weight: bold;
+}
+/* Style the dropdowns and stat display to be on the same row */
+.dropdowns-and-stat {
+  display: flex;
+  align-items: center;
+  gap: 20px;  /* Adjust the gap between the elements */
+}
+
+.stat-value-display {
+  font-size: 16px;
+  color: #334155;
+  margin-top: 8px;
+  font-weight: bold;
+}
+
+
+
 </style>
