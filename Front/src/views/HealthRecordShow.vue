@@ -30,15 +30,6 @@
           </div>
         </div>
 
-        <!-- 导入进度条 -->
-        <el-progress
-            v-if="showProgress"
-            :percentage="importProgress"
-            :stroke-width="18"
-            status="success"
-            style="margin-bottom: 10px;"
-        />
-
         <!-- 数据表（前端分页后仅渲染当前页） -->
         <el-table
             v-loading="loading"
@@ -168,26 +159,6 @@
         <el-button type="primary" :loading="saving" @click="submitForm">保 存</el-button>
       </template>
     </el-dialog>
-
-    <!-- 导入调试信息 -->
-    <el-dialog v-model="showImportDetail" title="导入调试信息" width="680px">
-      <el-descriptions :column="2" border v-if="importSummary">
-        <el-descriptions-item label="totalRows">{{ importSummary.totalRows }}</el-descriptions-item>
-        <el-descriptions-item label="saved">{{ importSummary.saved }}</el-descriptions-item>
-        <el-descriptions-item label="deduplicated">{{ importSummary.deduplicated }}</el-descriptions-item>
-        <el-descriptions-item label="skippedMissingKey">{{ importSummary.skippedMissingKey }}</el-descriptions-item>
-        <el-descriptions-item label="skippedAbnormal">{{ importSummary.skippedAbnormal }}</el-descriptions-item>
-        <el-descriptions-item label="message">{{ importSummary.message }}</el-descriptions-item>
-      </el-descriptions>
-
-      <h4 style="margin-top:12px;">原始响应(JSON)</h4>
-      <pre style="max-height:260px;overflow:auto;background:#f7f7f7;padding:10px;border-radius:6px;">{{ rawImportResp }}</pre>
-
-      <template #footer>
-        <el-button @click="showImportDetail=false">关 闭</el-button>
-        <el-button type="primary" @click="copyRaw">复制原始响应</el-button>
-      </template>
-    </el-dialog>
   </div>
   <!-- 右下角：导出报告（悬浮） -->
   <div class="export-fab" :class="{ disabled: loading }" @click="onExportClick">
@@ -209,7 +180,6 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'        // 👈 补上 watch
-import { ElMessage, ElMessageBox } from 'element-plus'
 import Header from '@/components/Header.vue'
 import {
   getAllHealthRecords,
@@ -220,12 +190,9 @@ import {
   importHealthRecords
 } from '@/api/HealthRecordShow.js'
 import { assessMetrics } from '@/utils/health/assess.js'
-
-
+import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 
 const loading = ref(false)
-const importProgress = ref(0)        // 进度百分比
-const showProgress   = ref(false)    // 控制进度条显示
 const saving  = ref(false)
 const downloading = ref(false)
 
@@ -279,9 +246,6 @@ const rules = {
 
 const importing = ref(false)
 const fileInput = ref(null)
-const showImportDetail = ref(false)
-const rawImportResp = ref('')
-const importSummary = ref(null)
 
 const onPickFile = () => { fileInput.value && fileInput.value.click() }
 const inferFormatByExt = (filename = '') => {
@@ -291,24 +255,26 @@ const inferFormatByExt = (filename = '') => {
   if (f.endsWith('.json')) return 'json'
   return ''
 }
-const copyRaw = async () => {
-  try { await navigator.clipboard.writeText(rawImportResp.value); ElMessage.success('已复制'); }
-  catch { ElMessage.error('复制失败') }
-}
 
-const fetchList = async () => {
-  // 先尝试从缓存拿，提升首屏
-  const cached = sessionStorage.getItem(CACHE_KEY)
-  if (cached) {
-    try {
-      list.value = JSON.parse(cached)
-    } catch {}
+const fetchList = async (opts = {}) => {
+  const { skipCache = false } = opts
+
+  // A. 本地 session 缓存：导入后可选择跳过
+  if (!skipCache) {
+    const cached = sessionStorage.getItem(CACHE_KEY)
+    if (cached) {
+      try { list.value = JSON.parse(cached) } catch {}
+    }
   }
 
   loading.value = true
   try {
-    const res = await getAllHealthRecords()
-    list.value = res.data || []
+    // B. 加时间戳，避免某些环境下 GET 被缓存
+    const res = await getAllHealthRecords({ _t: Date.now() })
+
+    // C. 兼容两种返回：1) 直接数组；2) { code, data } 业务包裹
+    const data = Array.isArray(res) ? res : (res?.data ?? [])
+    list.value = data
     sessionStorage.setItem(CACHE_KEY, JSON.stringify(list.value))
   } catch (err) {
     ElMessage.error(err?.message || '加载失败')
@@ -420,33 +386,87 @@ const onFileChange = async (e) => {
 
   const format = inferFormatByExt(file.name)
 
+  let loadingService
+  let refreshTimer = null
+  let lastCount = list.value.length        // 现有可见条数
+  let quietStreak = 0                      // 连续“无增长”的轮询次数
+  const INTERVAL = 10000                   // 10s 轮询一次
+  const QUIET_LIMIT = 6                    // 连续 6 次（约 1 分钟）无增长就停止轮询
+
+  const startRefresh = () => {
+    if (refreshTimer) return
+    refreshTimer = setInterval(async () => {
+      const before = list.value.length
+      await fetchList({ skipCache: true })
+      const after = list.value.length
+      if (after > before) {
+        lastCount = after
+        quietStreak = 0                    // 有新增，清零安静计数
+      } else {
+        quietStreak++
+        if (quietStreak >= QUIET_LIMIT) stopRefresh()
+      }
+    }, INTERVAL)
+  }
+  const stopRefresh = () => {
+    if (refreshTimer) {
+      clearInterval(refreshTimer)
+      refreshTimer = null
+    }
+  }
+
   try {
     importing.value = true
-    importProgress.value = 0
-    showProgress.value = true
-
-    const resp = await importHealthRecords(file, format, {
-      onUploadProgress: (progressEvent) => {
-        if (progressEvent?.total) {
-          importProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-        }
-      }
+    loadingService = ElLoading.service({
+      lock: true,
+      text: '正在导入，请稍候…',
+      background: 'rgba(0, 0, 0, 0.35)'
     })
 
-    // 注意：request 拦截器已把 res => res.data 了，这里 resp 就是业务 Result
-    rawImportResp.value = JSON.stringify(resp, null, 2)
-    importSummary.value = resp?.data || null
-    showImportDetail.value = true
+    // 在等待后端处理期间，开始轻量轮询，用户能看到逐步增长的数据
+    startRefresh()
 
-    ElMessage.success('导入完成')
-    fetchList()
+    // 关键：关闭超时，避免 12000s 后 axios 抛错（仍保持同一接口）
+    const resp = await importHealthRecords(file, format, { timeout: 0 })
+    const d = resp?.data || {}
+
+    const total = d.totalRows ?? d.total ?? 0
+    const saved = d.saved ?? 0
+    const dedup = d.deduplicated ?? d.dedup ?? 0
+    const miss  = d.skippedMissingKey ?? 0
+    const abn   = d.skippedAbnormal ?? 0
+
+    const msg = [
+      `导入完成：共 ${total} 行`,
+      `成功 ${saved} 行`,
+      `去重 ${dedup} 行`,
+      miss ? `缺主键跳过 ${miss} 行` : null,
+      abn  ? `异常跳过 ${abn} 行`     : null
+    ].filter(Boolean).join('，')
+    ElMessage.success(msg)
+
+    // 成功后强刷一次
+    await fetchList({ skipCache: true })
+    setTimeout(() => fetchList({ skipCache: true }), 400)
   } catch (err) {
-    rawImportResp.value = JSON.stringify(err?.response?.data || err, null, 2)
-    showImportDetail.value = true
-    ElMessage.error(err?.message || '导入失败')
+    // 如果是超时/网络错误，提示但不当成失败，继续后台轮询刷新数据
+    const isTimeout = err?.code === 'ECONNABORTED' || /timeout|Network Error/i.test(err?.message || '')
+    if (isTimeout) {
+      ElMessage.warning('与服务器连接中断，但导入可能仍在进行，将自动刷新列表查看最新进度')
+      // 立即放开遮罩，让用户能看列表增长
+      if (loadingService) loadingService.close()
+      loadingService = null
+      // 等轮询检测到连续无增长时自然停止
+    } else {
+      ElMessage.error(err?.response?.data?.message || err?.message || '导入失败，请稍后重试')
+      stopRefresh()
+    }
   } finally {
     importing.value = false
-    setTimeout(() => { showProgress.value = false }, 800)
+    // 正常成功时关闭遮罩；若上面因断线提前关过，这里判断一下
+    if (loadingService) loadingService.close()
+    // 若请求成功，这里也可以让轮询再跑几次；若想立刻停，解除注释下一行：
+    // stopRefresh()
   }
 }
 
