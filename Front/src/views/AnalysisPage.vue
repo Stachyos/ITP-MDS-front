@@ -255,6 +255,7 @@ export default {
   name: 'Analysis',
   components: { Header },
 
+
   data() {
     return {
       selectedVariable: 'totalCholesterol',
