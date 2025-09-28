@@ -23,3 +23,5 @@ export const apiSendEmailCode = ({ email }) =>
             silenceTimeout: true,  // 仅超时静默（配合 MDS.js 拦截器）
         }
     ).then(r => (r?.data && r?.data?.reply !== undefined) ? r.data : r)
+
+export const getUserId = () => Request.get('/api/user/getUserId')

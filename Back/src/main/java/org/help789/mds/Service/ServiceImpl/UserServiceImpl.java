@@ -3,6 +3,7 @@ package org.help789.mds.Service.ServiceImpl;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.help789.mds.Entity.Permission;
 import org.help789.mds.Entity.User;
 import org.help789.mds.Entity.Vo.RegisterReq;
 import org.help789.mds.Service.EmailCodeService;
@@ -11,6 +12,7 @@ import org.help789.mds.Service.MailSenderService;
 import org.help789.mds.Service.UserService;
 import org.help789.mds.Utils.ThreadLocalUtil;
 import org.help789.mds.Utils.pojo.Result;
+import org.help789.mds.repository.PermissionRepository;
 import org.help789.mds.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,9 @@ public class UserServiceImpl implements UserService {
     );
     @Resource
     private UserRepository userRepository;
+
+    @Resource
+    private PermissionRepository permissionRepository;
 
     @Resource
     private PasswordEncoder passwordEncoder;
@@ -66,9 +71,46 @@ public class UserServiceImpl implements UserService {
 
         userRepository.save(user);
 
-        // 3) 返回成功
-        return Result.success("registered successfully",user.getRealName());
+        // 3) 根据用户角色分配权限并保存到权限表
+        Permission permission = Permission.builder()
+                .userId(user.getId()) // 使用注册成功后返回的用户ID
+                .build();
+
+        // 分配权限
+        switch (req.getRole()) {
+            case "administrators":
+                permission.setAccessLogPage(true);
+                permission.setAccessVisualPage(true);
+                permission.setAccessDisplayPage(true);
+                permission.setPermissionManagement(true);
+                permission.setOptionEdit(true);
+                break;
+            case "researchers":
+                permission.setAccessDisplayPage(true);
+                permission.setAccessVisualPage(true);
+                permission.setOptionEdit(true);
+                break;
+            case "analysts":
+                permission.setAccessDisplayPage(true);
+                permission.setAccessVisualPage(true);
+                permission.setOptionEdit(true);
+                break;
+            case "auditors":
+                permission.setAccessDisplayPage(true);
+                permission.setAccessVisualPage(true);
+                break;
+            default:
+                // 如果是无效角色，可以抛出异常或进行日志记录
+                throw new IllegalArgumentException("Invalid role: " + req.getRole());
+        }
+
+        // 保存权限
+        permissionRepository.save(permission);
+
+        // 4) 返回成功
+        return Result.success("registered successfully", user.getRealName());
     }
+
 
     @Override
     public Result<String> loginByEmail(String email, String code) {
@@ -160,6 +202,17 @@ public class UserServiceImpl implements UserService {
         System.out.println("userid: " + ThreadLocalUtil.getCurrentUserId());
         return Result.success("登录成功", token);
     }
+
+    @Override
+    public Result<String> getUserId() {
+        Long current = ThreadLocalUtil.getCurrentUserId(); // 可能是 Long / 可能为 null
+        if (current == null) {
+            return Result.failed("not logged in"); // 自定义错误信息
+        }
+        System.out.println("userid: " + ThreadLocalUtil.getCurrentUserId());
+        return Result.success(current.toString());
+    }
+
 
     @Override
     public Result<Void> sendCodeForm(String email, HttpServletRequest request) {

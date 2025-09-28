@@ -13,6 +13,7 @@ import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.ParameterNameDiscoverer;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
+import org.springframework.expression.common.TemplateParserContext;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.stereotype.Component;
@@ -94,11 +95,14 @@ public class AuditLogAspect {
                 ctx.setVariable(key, args[i]);
             }
             ctx.setVariable("args", Arrays.asList(args));
-            Expression exp = parser.parseExpression(spel);
+
+            // 使用 TemplateParserContext 来识别 #{...} 占位符
+            Expression exp = parser.parseExpression(spel, new TemplateParserContext());
             Object val = exp.getValue(ctx);
             return val == null ? null : val.toString();
         } catch (Exception e) {
-            return spel; // 渲染失败则返回原文
+            log.warn("SpEL 解析失败: {}, 表达式: {}", e.getMessage(), spel);
+            return spel; // 渲染失败则返回原文，避免报错
         }
     }
 }

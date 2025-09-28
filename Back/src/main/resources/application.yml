@@ -17,7 +17,7 @@ spring:
       max-lifetime: 1800000
   jpa:
     hibernate:
-      ddl-auto: create   # 远端库已建表建议用 validate
+      ddl-auto: update   # 远端库已建表建议用 validate
     show-sql: true
     properties:
       hibernate.format_sql: true

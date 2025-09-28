@@ -1,6 +1,6 @@
 <template>
   <div class="permission-page">
-    <Header />
+    <Header :key="headerKey" />
 
     <div class="main-content">
       <div class="content-header">
@@ -34,7 +34,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column prop="accessVisualPage" label="access visual" width="150">
+        <el-table-column prop="accessVisualPage" label="access analysis" width="150">
           <template #default="{ row }">
             <el-switch v-model="row.accessVisualPage" />
           </template>
@@ -88,6 +88,7 @@ import {
   savePermission,
   deletePermission
 } from '@/api/Permission.js'
+const headerKey = ref(0)
 
 const loading = ref(false)
 const savingId = ref(null)
@@ -118,6 +119,8 @@ const savePermissionRow = async (row) => {
   try {
     await savePermission(row)
     ElMessage.success(`用户 ${row.account} (${row.email}) 权限已更新`)
+    await fetchPermissions()
+    headerKey.value++
   } catch (err) {
     ElMessage.error(err?.response?.data?.message || err?.message || '保存失败')
   } finally {
@@ -136,7 +139,8 @@ const deletePermissionRow = async (row) => {
     deletingId.value = row.userId
     await deletePermission(row.permissionId)
     ElMessage.success('删除成功')
-    fetchPermissions()
+    await fetchPermissions()
+    headerKey.value++
   } catch (err) {
     if (err !== 'cancel') {
       ElMessage.error(err?.response?.data?.message || err?.message || '删除失败')

@@ -12,6 +12,7 @@ public interface UserService {
     Result<String> register(RegisterReq req);
     // UserService.java
     Result<String> loginByEmail(String email, String code);
+    Result<String> getUserId();
 
     public Result<Void> sendCodeForm(String email, HttpServletRequest request);
 

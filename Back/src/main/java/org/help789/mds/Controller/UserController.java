@@ -8,8 +8,9 @@ import org.help789.mds.Entity.Vo.RegisterReq;
 import org.help789.mds.Service.EmailCodeService;
 import org.help789.mds.Service.MailSenderService;
 import org.help789.mds.Service.UserService;
+import org.help789.mds.Utils.ThreadLocalUtil;
 import org.help789.mds.Utils.pojo.Result;
-import org.help789.mds.logging.LogAction;           // ✅ 新增
+import org.help789.mds.logging.LogAction;
 import org.help789.mds.repository.UserRepository;
 import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
@@ -29,10 +30,10 @@ public class UserController {
     @Resource
     private UserRepository userRepository;
 
-    // 账号密码登录（form-urlencoded）
+    /** 账号密码登录（form-urlencoded） */
     @LogAction(
             value = "user:login",
-            detail = "account=#{#account},remember=#{#remember?:false}"
+            detail = "账号密码登录：account=#{#account}，记住登录=#{#remember?:false}"
     )
     @PostMapping(
             value = "/login",
@@ -48,10 +49,10 @@ public class UserController {
         return userService.loginBySecretWithPassword(account, password);
     }
 
-    // 发送验证码（form-urlencoded）
+    /** 发送验证码（form-urlencoded） */
     @LogAction(
             value = "user:send-code",
-            detail = "email=#{#email},ip=#{#req?.getHeader('X-Forwarded-For')?:#req?.getHeader('X-Real-IP')?:#req?.getRemoteAddr()}"
+            detail = "发送邮箱验证码：email=#{#email}，IP=#{#req?.getHeader('X-Forwarded-For')?:#req?.getHeader('X-Real-IP')?:#req?.getRemoteAddr()}"
     )
     @PostMapping(
             value = "/send-email-code",
@@ -62,12 +63,9 @@ public class UserController {
         if (!email.endsWith("@qq.com") && !email.endsWith("@foxmail.com")) {
             return Result.failed("仅支持 QQ/Foxmail 邮箱");
         }
-        System.out.println(email);
         if (!userRepository.existsByEmail(email)) {
-            System.out.println("buzhidao");
             return Result.failed("邮箱未注册");
         }
-        System.out.println("buzhidasdasd");
         String ip = realIp(req);
         try {
             emailCodeService.checkRateLimit(email, ip);
@@ -83,7 +81,7 @@ public class UserController {
 
     @LogAction(
             value = "user:login-email",
-            detail = "email=#{#email},codeLen=#{#code?.length()?:0}"
+            detail = "邮箱验证码登录：email=#{#email}，验证码长度=#{#code?.length()?:0}"
     )
     @PostMapping(
             value = "/login-email",
@@ -96,17 +94,10 @@ public class UserController {
         return userService.loginByEmail(email, code);
     }
 
-    private String realIp(HttpServletRequest req){
-        String xff = req.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) return xff.split(",")[0].trim();
-        String rip = req.getHeader("X-Real-IP");
-        return (rip != null && !rip.isBlank()) ? rip : req.getRemoteAddr();
-    }
-
     // 注册（form-urlencoded）— 用 @ModelAttribute 绑定到 VO
     @LogAction(
             value = "user:register",
-            detail = "account=#{#req?.account?:'-'},email=#{#req?.email?:'-'}"
+            detail = "用户注册：account=#{#req?.account?:'-'}，email=#{#req?.email?:'-'}"
     )
     @PostMapping(
             value = "/register",
@@ -117,4 +108,22 @@ public class UserController {
         // ⚠️ 不记录密码等敏感字段
         return userService.register(req);
     }
+
+    private String realIp(HttpServletRequest req){
+        String xff = req.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) return xff.split(",")[0].trim();
+        String rip = req.getHeader("X-Real-IP");
+        return (rip != null && !rip.isBlank()) ? rip : req.getRemoteAddr();
+    }
+
+    @GetMapping(
+            value = "/getUserId",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public Result<String> getUserId() {
+        System.out.println(userService.getUserId());
+        return userService.getUserId(); // 请确保返回的是 Result<String>
+    }
+
+
 }
