@@ -80,9 +80,6 @@
         </div>
       </div>
 
-
-
-
       <!-- 1. A/B Variable Tests -->
       <div class="group">
         <div class="group-title">A/B Variable Tests</div>
