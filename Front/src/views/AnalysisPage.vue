@@ -52,9 +52,12 @@
           <div class="tips">Auto-select suitable test and chart by variable types（根据变量类型自动选择检验与图表）</div>
         </div>
 
-        <div class="cards">
+        <div class="cards ab-test-cards">
+          <!-- 统计结果卡片 -->
           <div class="card stat-card">
-            <div class="card-header"><div class="card-title">Statistics（统计结果）</div></div>
+            <div class="card-header">
+              <div class="card-title">Statistics（统计结果）</div>
+            </div>
             <div class="stat-content">
               <div v-if="pairType === 'num-num'" class="stat-grid">
                 <div class="stat-item"><span>Pearson r（皮尔逊 r）：</span>{{ fmt(statsPair.pearson?.r) }}</div>
@@ -82,13 +85,21 @@
             </div>
           </div>
 
-          <div class="card">
-            <div class="card-header"><div class="card-title">Visualization（可视化）</div></div>
+          <!-- 可视化图表卡片 -->
+          <div class="card chart-card">
+            <div class="card-header">
+              <div class="card-title">Visualization（可视化）</div>
+            </div>
             <div class="chart" ref="pairChartRef"></div>
           </div>
+        </div>
 
-          <div class="card" v-if="pairType === 'cat-cat'">
-            <div class="card-header"><div class="card-title">Contingency Heatmap（列联表热力图）</div></div>
+        <!-- 列联表热力图（只在 cat-cat 时显示，放在第二行） -->
+        <div class="cards contingency-cards" v-if="pairType === 'cat-cat'">
+          <div class="card chart-card full-width">
+            <div class="card-header">
+              <div class="card-title">Contingency Heatmap（列联表热力图）</div>
+            </div>
             <div class="chart" ref="contingencyHeatRef"></div>
           </div>
         </div>
@@ -97,9 +108,11 @@
       <!-- 2. Correlation Matrix -->
       <div class="group">
         <div class="group-title">Correlation Matrix (Pearson)（数值属性相关矩阵（皮尔逊））</div>
-        <div class="cards">
-          <div class="card">
-            <div class="card-header"><div class="card-title">Heatmap（热力图）</div></div>
+        <div class="cards single-card">
+          <div class="card chart-card">
+            <div class="card-header">
+              <div class="card-title">Heatmap（热力图）</div>
+            </div>
             <div class="chart" ref="corrHeatRef"></div>
           </div>
         </div>
@@ -124,9 +137,11 @@
           <div class="tips">Buckets: -∞~18, 18~30, …, 80+（按年龄分箱计算均值并绘制折线）</div>
         </div>
 
-        <div class="cards">
-          <div class="card">
-            <div class="card-header"><div class="card-title">Line Chart（折线图）</div></div>
+        <div class="cards single-card">
+          <div class="card chart-card">
+            <div class="card-header">
+              <div class="card-title">Line Chart（折线图）</div>
+            </div>
             <div class="chart" ref="ageTrendRef"></div>
           </div>
         </div>
@@ -147,9 +162,11 @@
           <div class="tips">Show Q1/Median/Q3, whiskers (1.5×IQR), and outliers（显示四分位、须与异常点）</div>
         </div>
 
-        <div class="cards">
-          <div class="card">
-            <div class="card-header"><div class="card-title">{{ metricLabel(boxMetricKey) }} — Boxplot（箱线图）</div></div>
+        <div class="cards single-card">
+          <div class="card chart-card">
+            <div class="card-header">
+              <div class="card-title">{{ metricLabel(boxMetricKey) }} — Boxplot（箱线图）</div>
+            </div>
             <div class="chart" ref="boxplotRef"></div>
           </div>
         </div>
@@ -170,14 +187,15 @@
           <div class="tips">Per-group bootstrap (default 1000) — 2.5%~97.5% quantiles as 95% CI（每组自助抽样取分位构造 95% CI）</div>
         </div>
 
-        <div class="cards">
-          <div class="card">
-            <div class="card-header"><div class="card-title">{{ metricLabel(ciMetricKey) }} — Mean & 95% CI（均值与置信区间）</div></div>
+        <div class="cards single-card">
+          <div class="card chart-card">
+            <div class="card-header">
+              <div class="card-title">{{ metricLabel(ciMetricKey) }} — Mean & 95% CI（均值与置信区间）</div>
+            </div>
             <div class="chart" ref="ciRef"></div>
           </div>
         </div>
       </div>
-
     </div>
   </div>
 </template>
@@ -280,8 +298,32 @@ export default {
 
   async mounted() {
     await this.fetchAll()
-    this.initCharts()
-    this.renderAll()
+
+    // 检查并修复负数年龄
+    const negativeCount = this.checkNegativeAges()
+    if (negativeCount > 0) {
+      console.log(`发现并修复了 ${negativeCount} 条负数年龄记录`)
+    }
+
+    // 测试各种边界情况
+    console.log('年龄分桶测试:')
+    const testCases = [
+      { age: -5, expected: '未知 (Unknown)' },
+      { age: -1, expected: '未知 (Unknown)' },
+      { age: 0, expected: '0~18' },
+      { age: 17, expected: '0~18' },
+      { age: 18, expected: '18~30' },
+      { age: 25, expected: '18~30' },
+      { age: 85, expected: '80+' }
+    ]
+
+    testCases.forEach(test => {
+      const result = this.ageBucket(test.age)
+      const status = result === test.expected ? '✓' : '✗'
+      console.log(`${status} 年龄 ${test.age} -> ${result} (期望: ${test.expected})`)
+    })
+
+    this.$nextTick(() => this.renderAll())
     window.addEventListener('resize', this.handleResize)
   },
 
@@ -297,11 +339,39 @@ export default {
       try {
         const res = await getAllHealthRecords()
         const data = Array.isArray(res?.data) ? res.data : (res?.data?.data ?? [])
-        this.raw = data || []
+
+        // 清理数据：将负数年龄设为 null
+        this.raw = (data || []).map(record => {
+          if (record.age != null) {
+            const age = Number(record.age)
+            // 明确拒绝负数
+            if (isNaN(age) || !isFinite(age) || age < 0 || age > 150) {
+              return { ...record, age: null }
+            }
+          }
+          return record
+        })
+
+        // 统计信息
+        const validAges = this.raw.map(r => r.age).filter(age => age != null && age >= 0)
+        const negativeAges = this.raw.filter(r => {
+          const age = Number(r.age)
+          return !isNaN(age) && age < 0
+        })
+
+        console.log('数据清理统计:', {
+          总记录数: this.raw.length,
+          有效年龄数: validAges.length,
+          负数年龄数: negativeAges.length,
+          负数年龄样例: negativeAges.slice(0, 3).map(r => r.age)
+        })
+
       } catch (e) {
         ElMessage.error(e?.message || 'Load failed（加载失败）')
         this.raw = []
-      } finally { this.loading = false }
+      } finally {
+        this.loading = false
+      }
     },
     async reload() {
       await this.fetchAll()
@@ -324,7 +394,38 @@ export default {
     // ---- Utils ----
     metricDef(key){ return this.metrics.find(m=>m.key===key) },
     metricLabel(key){ return this.metricDef(key)?.label || key },
-    bucketize(val, cuts){ if (val==null||Number.isNaN(val)) return 'Unknown（未知）'; for(let i=0;i<cuts.length;i++){ if(val<cuts[i]) return `${i===0?'-∞':cuts[i-1]}~${cuts[i]}` } return `${cuts[cuts.length-1]}+` },
+    bucketize(val, cuts) {
+      // 首先检查值的有效性
+      if (val == null || Number.isNaN(val) || !isFinite(val)) {
+        return '未知 (Unknown)'
+      }
+
+      // 明确拒绝负数年龄
+      if (val < 0) {
+        return '未知 (Unknown)'
+      }
+
+      if (!cuts || !Array.isArray(cuts) || cuts.length === 0) {
+        return '未知 (Unknown)'
+      }
+
+      const sortedCuts = [...cuts].sort((a, b) => a - b)
+
+      // 第一个区间：0 ~ 第一个切割点（不包括第一个切割点）
+      if (val < sortedCuts[0]) {
+        return `0~${sortedCuts[0]}`
+      }
+
+      // 中间区间
+      for (let i = 1; i < sortedCuts.length; i++) {
+        if (val < sortedCuts[i]) {
+          return `${sortedCuts[i-1]}~${sortedCuts[i]}`
+        }
+      }
+
+      // 最后一个区间
+      return `${sortedCuts[sortedCuts.length - 1]}+`
+    },
     bucketLabels(cuts){
       const a=[]
       for(let i=0;i<cuts.length;i++){ a.push(i===0?`-∞~${cuts[i]}`:`${cuts[i-1]}~${cuts[i]}`) }
@@ -407,6 +508,7 @@ export default {
       this.renderBootstrapCI()
       this.handleResize()
     },
+
     renderVarPair(){
       if(!this.pairChart) this.pairChart=echarts.init(this.$refs.pairChartRef)
       const aDef=this.metricDef(this.varA), bDef=this.metricDef(this.varB)
@@ -422,15 +524,57 @@ export default {
         const [minX,maxX]=[Math.min(...xs),Math.max(...xs)]
         const fit=[[minX,reg.intercept+reg.slope*minX],[maxX,reg.intercept+reg.slope*maxX]]
         this.pairChart.setOption({
-          title:{ text:`${this.metricLabel(this.varA)} vs ${this.metricLabel(this.varB)}（散点与回归）`, left:'center', top:8 },
+          title:{
+            text: `${this.metricLabel(this.varA)} vs ${this.metricLabel(this.varB)}（散点与回归）`,
+            left: 'center',
+            top: 8,  // 更靠近顶部
+            textStyle: {
+              fontSize: 14,  // 字体变小
+              fontWeight: 'normal'  // 字体重量变正常
+            }
+          },
           tooltip:{ trigger:'item' },
-          grid:{ left:50,right:30,top:50,bottom:50,containLabel:true },
-          xAxis:{ type:'value', name:this.metricLabel(this.varA), splitLine:{ lineStyle:{ color:'#F3F4F6' } } },
-          yAxis:{ type:'value', name:this.metricLabel(this.varB), splitLine:{ lineStyle:{ color:'#F3F4F6' } } },
-          legend:{ right:10, bottom:10, data:['Samples（样本）','Fit Line（拟合线）'] },
+          grid:{
+            left: 20,
+            right: 50,
+            top: 40,  // 减少顶部间距，让标题更靠近图表
+            bottom: 50,
+            containLabel: true
+          },
+          xAxis:{
+            type:'value',
+            name:this.metricLabel(this.varA),
+            splitLine:{ lineStyle:{ color:'#F3F4F6' } }
+          },
+          yAxis:{
+            type:'value',
+            name:this.metricLabel(this.varB),
+            splitLine:{ lineStyle:{ color:'#F3F4F6' } }
+          },
+          legend:{
+            right: 10,
+            bottom: 10,
+            data:['Samples（样本）','Fit Line（拟合线）'],
+            textStyle: {
+              fontSize: 12  // 图例字体也相应变小
+            }
+          },
           series:[
-            { name:'Samples（样本）', type:'scatter', data },
-            { name:'Fit Line（拟合线）', type:'line', data:fit, showSymbol:false }
+            {
+              name:'Samples（样本）',
+              type:'scatter',
+              data,
+              symbolSize: 6  // 散点大小稍微调小
+            },
+            {
+              name:'Fit Line（拟合线）',
+              type:'line',
+              data:fit,
+              showSymbol:false,
+              lineStyle: {
+                width: 2
+              }
+            }
           ]
         })
         if(this.contingencyHeat){ this.contingencyHeat.dispose(); this.contingencyHeat=null }
@@ -443,24 +587,97 @@ export default {
           name:rName, type:'bar', stack:'total', emphasis:{ focus:'series' }, data:ct.cols.map((_,j)=>ct.table[i][j])
         }))
         this.pairChart.setOption({
-          title:{ text:`${this.metricLabel(this.varA)} × ${this.metricLabel(this.varB)} — Stacked Bars（堆叠柱）`, left:'center', top:8 },
+          title:{
+            text: `${this.metricLabel(this.varA)} × ${this.metricLabel(this.varB)} — Stacked Bars（堆叠柱）`,
+            left: 'center',
+            top: 8,
+            textStyle: {
+              fontSize: 14,
+              fontWeight: 'normal'
+            }
+          },
           tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' } },
-          legend:{ right:10, bottom:10 },
-          grid:{ left:50,right:30,top:60,bottom:60,containLabel:true },
-          xAxis:{ type:'category', data:categories, axisLabel:{ interval:0, rotate:20 } },
-          yAxis:{ type:'value', name:'Count（计数）', splitLine:{ lineStyle:{ color:'#F3F4F6' } } },
+          legend:{
+            right:10,
+            bottom:10,
+            textStyle: {
+              fontSize: 12
+            }
+          },
+          grid:{
+            left:50,
+            right:30,
+            top:40,  // 调整顶部间距
+            bottom:60,
+            containLabel:true
+          },
+          xAxis:{
+            type:'category',
+            data:categories,
+            axisLabel:{
+              interval:0,
+              rotate:20,
+              fontSize: 11  // X轴标签字体调小
+            }
+          },
+          yAxis:{
+            type:'value',
+            name:'Count（计数）',
+            splitLine:{ lineStyle:{ color:'#F3F4F6' } },
+            nameTextStyle: {
+              fontSize: 11  // Y轴名称字体调小
+            }
+          },
           series
         })
         if(!this.contingencyHeat) this.contingencyHeat=echarts.init(this.$refs.contingencyHeatRef)
         const heatData=[]
         for(let i=0;i<ct.rows.length;i++){ for(let j=0;j<ct.cols.length;j++){ heatData.push([j,i,ct.table[i][j]]) } }
         this.contingencyHeat.setOption({
-          title:{ text:'Contingency Heatmap（列联表热力图）', left:'center', top:6 },
+          title:{
+            text:'Contingency Heatmap（列联表热力图）',
+            left:'center',
+            top:6,
+            textStyle: {
+              fontSize: 14,
+              fontWeight: 'normal'
+            }
+          },
           tooltip:{ position:'top' },
-          grid:{ left:70,right:30,top:40,bottom:60,containLabel:true },
-          xAxis:{ type:'category', data:ct.cols, splitArea:{ show:true } },
-          yAxis:{ type:'category', data:ct.rows, splitArea:{ show:true } },
-          visualMap:{ min:0, max:Math.max(1,...heatData.map(d=>d[2])), calculable:true, orient:'horizontal', left:'center', bottom:10 },
+          grid:{
+            left:70,
+            right:30,
+            top:35,  // 调整顶部间距
+            bottom:60,
+            containLabel:true
+          },
+          xAxis:{
+            type:'category',
+            data:ct.cols,
+            splitArea:{ show:true },
+            axisLabel: {
+              fontSize: 11
+            }
+          },
+          yAxis:{
+            type:'category',
+            data:ct.rows,
+            splitArea:{ show:true },
+            axisLabel: {
+              fontSize: 11
+            }
+          },
+          visualMap:{
+            min:0,
+            max:Math.max(1,...heatData.map(d=>d[2])),
+            calculable:true,
+            orient:'horizontal',
+            left:'center',
+            bottom:10,
+            textStyle: {
+              fontSize: 11
+            }
+          },
           series:[{ type:'heatmap', data:heatData, label:{ show:true } }]
         })
       } else {
@@ -476,42 +693,200 @@ export default {
           this.statsPair={ group:{ type:'anova', k:cats.length } }
         }
         this.pairChart.setOption({
-          title:{ text:`Group Means of ${this.metricLabel(numKey)} by ${this.metricLabel(catKey)}（组均值）`, left:'center', top:8 },
+          title:{
+            text: `Group Means of ${this.metricLabel(numKey)} by ${this.metricLabel(catKey)}（组均值）`,
+            left: 'center',
+            top: 8,
+            textStyle: {
+              fontSize: 14,
+              fontWeight: 'normal'
+            }
+          },
           tooltip:{ trigger:'axis' },
-          legend:{ right:10, bottom:10, data:[`Mean（均值）`] },
-          grid:{ left:50,right:30,top:60,bottom:60,containLabel:true },
-          xAxis:{ type:'category', data:cats, axisLabel:{ interval:0, rotate:20 } },
-          yAxis:{ type:'value', name:'Mean（均值）', splitLine:{ lineStyle:{ color:'#F3F4F6' } } },
-          series:[{ name:'Mean（均值）', type:'bar', data:means, barMaxWidth:40, label:{ show:true, position:'top' } }]
+          legend:{
+            right:10,
+            bottom:10,
+            data:[`Mean（均值）`],
+            textStyle: {
+              fontSize: 12
+            }
+          },
+          grid:{
+            left:50,
+            right:30,
+            top:40,  // 调整顶部间距
+            bottom:60,
+            containLabel:true
+          },
+          xAxis:{
+            type:'category',
+            data:cats,
+            axisLabel:{
+              interval:0,
+              rotate:20,
+              fontSize: 11
+            }
+          },
+          yAxis:{
+            type:'value',
+            name:'Mean（均值）',
+            splitLine:{ lineStyle:{ color:'#F3F4F6' } },
+            nameTextStyle: {
+              fontSize: 11
+            }
+          },
+          series:[{
+            name:'Mean（均值）',
+            type:'bar',
+            data:means,
+            barMaxWidth:40,
+            label:{
+              show:true,
+              position:'top',
+              fontSize: 11  // 柱状图标签字体调小
+            }
+          }]
         })
         if(this.contingencyHeat){ this.contingencyHeat.dispose(); this.contingencyHeat=null }
       }
     },
+
+    // 其他渲染方法也相应调整标题样式
     renderCorrMatrix(){
-      const numKeys=this.metrics.filter(m=>m.kind==='number').map(m=>m.key)
-      const data=this.applyGlobalFilters(this.raw)
-      const mat=[]
-      for(let i=0;i<numKeys.length;i++){
-        for(let j=0;j<numKeys.length;j++){
-          const xi=data.map(r=>r[numKeys[i]]).filter(v=>typeof v==='number'&&!Number.isNaN(v))
-          const yj=data.map(r=>r[numKeys[j]]).filter(v=>typeof v==='number'&&!Number.isNaN(v))
-          const n=Math.min(xi.length,yj.length)
-          const x=xi.slice(0,n), y=yj.slice(0,n)
-          const { r }=this.pearson(x,y)
-          mat.push([i,j,isNaN(r)?0:r])
+      const numKeys = this.metrics.filter(m => m.kind === 'number').map(m => m.key)
+      const data = this.applyGlobalFilters(this.raw)
+      const mat = []
+
+      // 计算相关系数矩阵
+      for(let i = 0; i < numKeys.length; i++){
+        for(let j = 0; j < numKeys.length; j++){
+          const xi = data.map(r => r[numKeys[i]]).filter(v => typeof v === 'number' && !Number.isNaN(v))
+          const yj = data.map(r => r[numKeys[j]]).filter(v => typeof v === 'number' && !Number.isNaN(v))
+          const n = Math.min(xi.length, yj.length)
+          const x = xi.slice(0, n), y = yj.slice(0, n)
+          const { r } = this.pearson(x, y)
+          mat.push([i, j, isNaN(r) ? 0 : r])
         }
       }
-      const labels=numKeys.map(k=>this.metricLabel(k))
+
+      const labels = numKeys.map(k => this.metricLabel(k))
+
       this.corrHeat.setOption({
-        title:{ text:'Correlation Matrix（相关矩阵）', left:'center', top:6 },
-        tooltip:{ position:'top', formatter: p=>`${labels[p.value[1]]} × ${labels[p.value[0]]}: r = ${this.fmt(p.value[2])}` },
-        grid:{ left:100,right:40,top:40,bottom:70,containLabel:true },
-        xAxis:{ type:'category', data:labels, splitArea:{ show:true }, axisLabel:{ rotate:30 } },
-        yAxis:{ type:'category', data:labels, splitArea:{ show:true } },
-        visualMap:{ min:-1, max:1, calculable:true, orient:'horizontal', left:'center', bottom:10 },
-        series:[{ type:'heatmap', data:mat, label:{ show:true, formatter:({value})=>this.fmt(value[2]) } }]
+        title: {
+          text: 'Correlation Matrix（相关矩阵）',
+          left: 'center',
+          top: 10,
+          textStyle: {
+            fontSize: 16,
+            fontWeight: 'bold',
+            color: '#333'
+          }
+        },
+        tooltip: {
+          position: 'top',
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          borderColor: '#333',
+          textStyle: {
+            color: '#fff'
+          },
+          formatter: p => {
+            const value = p.value[2]
+            const strength = Math.abs(value) > 0.7 ? '强' : Math.abs(value) > 0.3 ? '中等' : '弱'
+            return `
+          <div style="text-align: center;">
+            <div><strong>${labels[p.value[1]]} × ${labels[p.value[0]]}</strong></div>
+            <div>相关系数: <strong>${this.fmt(value)}</strong></div>
+            <div style="font-size: 12px; color: #ccc">${strength}相关</div>
+          </div>
+        `
+          }
+        },
+        grid: {
+          left: 120,
+          right: 40,
+          top: 50,
+          bottom: 100,
+          height: numKeys.length * 30,
+          width: 'auto',
+          containLabel: true
+        },
+        xAxis: {
+          type: 'category',
+          data: labels,
+          splitArea: { show: true },
+          axisLabel: {
+            rotate: 45,
+            fontSize: 11,
+            interval: 0,
+            margin: 15
+          },
+          axisLine: {
+            lineStyle: {
+              color: '#ccc'
+            }
+          }
+        },
+        yAxis: {
+          type: 'category',
+          data: labels,
+          splitArea: { show: true },
+          axisLabel: {
+            fontSize: 11,
+            margin: 10
+          },
+          axisLine: {
+            lineStyle: {
+              color: '#ccc'
+            }
+          }
+        },
+        visualMap: {
+          min: -1,
+          max: 1,
+          calculable: true,
+          orient: 'horizontal',
+          left: 'center',
+          bottom: 30,
+          itemWidth: 12,
+          itemHeight: 80,
+          textStyle: {
+            fontSize: 10
+          },
+          // 方案1：使用简单的颜色渐变（推荐）
+          inRange: {
+            color: ['#1a3670', '#597ef7', '#adc6ff', '#f0f0f0', '#ffccc7', '#ff4d4f', '#a8071a']
+          }
+        },
+        series: [{
+          type: 'heatmap',
+          data: mat,
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowColor: 'rgba(0, 0, 0, 0.5)'
+            }
+          },
+          label: {
+            show: true,
+            formatter: ({ value }) => {
+              const num = value[2]
+              if (Math.abs(num) > 0.3) {
+                return this.fmt(num)
+              }
+              return ''
+            },
+            color: '#333',
+            fontSize: 10,
+            fontWeight: 'bold'
+          },
+          itemStyle: {
+            borderColor: '#fff',
+            borderWidth: 1
+          }
+        }]
       })
     },
+
     renderAgeTrend(){
       const filtered=this.applyGlobalFilters(this.raw)
       const cuts=[18,30,40,50,60,70,80], labels=this.bucketLabels(cuts)
@@ -524,21 +899,54 @@ export default {
         series.push({ name:this.metricLabel(key), type:'line', data:values, connectNulls:true, smooth:true })
       }
       this.ageTrendChart.setOption({
-        title:{ text:'Means by Age Bucket（按年龄区间的均值变化）', left:'center', top:8 },
+        title:{
+          text:'Means by Age Bucket（按年龄区间的均值变化）',
+          left:'center',
+          top:8,
+          textStyle: {
+            fontSize: 14,
+            fontWeight: 'normal'
+          }
+        },
         tooltip:{ trigger:'axis' },
-        legend:{ right:10, bottom:10 },
-        grid:{ left:50,right:30,top:60,bottom:60,containLabel:true },
-        xAxis:{ type:'category', data:labels },
-        yAxis:{ type:'value', name:'Mean（均值）', splitLine:{ lineStyle:{ color:'#F3F4F6' } } },
+        legend:{
+          right:10,
+          bottom:10,
+          textStyle: {
+            fontSize: 12
+          }
+        },
+        grid:{
+          left:50,
+          right:30,
+          top:40,  // 调整顶部间距
+          bottom:60,
+          containLabel:true
+        },
+        xAxis:{
+          type:'category',
+          data:labels,
+          axisLabel: {
+            fontSize: 11
+          }
+        },
+        yAxis:{
+          type:'value',
+          name:'Mean（均值）',
+          splitLine:{ lineStyle:{ color:'#F3F4F6' } },
+          nameTextStyle: {
+            fontSize: 11
+          }
+        },
         series
       })
     },
+
     renderBoxplot(){
       const key=this.boxMetricKey, groupKey=this.boxGroupKey
       if(!key||!groupKey) return
-      const groups = this.extractNumCat(key, groupKey) // Map<group, number[]>
+      const groups = this.extractNumCat(key, groupKey)
       const cats = Array.from(groups.keys())
-      // five-number summary & outliers
       const five = [], outliers=[]
       const q = (arr, p) => {
         if(!arr.length) return NaN
@@ -561,18 +969,55 @@ export default {
         }
       })
       this.boxplotChart.setOption({
-        title:{ text:`${this.metricLabel(key)} — Boxplot（箱线图）`, left:'center', top:8 },
+        title:{
+          text:`${this.metricLabel(key)} — Boxplot（箱线图）`,
+          left:'center',
+          top:8,
+          textStyle: {
+            fontSize: 14,
+            fontWeight: 'normal'
+          }
+        },
         tooltip:{ trigger:'item' },
-        grid:{ left:60,right:30,top:60,bottom:60,containLabel:true },
-        xAxis:{ type:'category', data:cats, axisLabel:{ interval:0, rotate:20 } },
-        yAxis:{ type:'value', name:this.metricLabel(key), splitLine:{ lineStyle:{ color:'#F3F4F6' } } },
-        legend:{ right:10, bottom:10, data:['Box（箱线）','Outliers（异常点）'] },
+        grid:{
+          left:60,
+          right:30,
+          top:40,  // 调整顶部间距
+          bottom:60,
+          containLabel:true
+        },
+        xAxis:{
+          type:'category',
+          data:cats,
+          axisLabel:{
+            interval:0,
+            rotate:20,
+            fontSize: 11
+          }
+        },
+        yAxis:{
+          type:'value',
+          name:this.metricLabel(key),
+          splitLine:{ lineStyle:{ color:'#F3F4F6' } },
+          nameTextStyle: {
+            fontSize: 11
+          }
+        },
+        legend:{
+          right:10,
+          bottom:10,
+          data:['Box（箱线）','Outliers（异常点）'],
+          textStyle: {
+            fontSize: 12
+          }
+        },
         series:[
           { name:'Box（箱线）', type:'boxplot', data:five, itemStyle:{ borderColor:'#4B5563' } },
           { name:'Outliers（异常点）', type:'scatter', data:outliers.map(([i,v])=>[cats[i],v]) }
         ]
       })
     },
+
     renderBootstrapCI(B=1000){
       const key=this.ciMetricKey, groupKey=this.ciGroupKey
       if(!key||!groupKey) return
@@ -612,17 +1057,74 @@ export default {
         }
       }
       this.ciChart.setOption({
-        title:{ text:`${this.metricLabel(key)} — Mean & 95% CI（均值与置信区间）`, left:'center', top:8 },
+        title:{
+          text:`${this.metricLabel(key)} — Mean & 95% CI（均值与置信区间）`,
+          left:'center',
+          top:8,
+          textStyle: {
+            fontSize: 14,
+            fontWeight: 'normal'
+          }
+        },
         tooltip:{ trigger:'axis' },
-        legend:{ right:10, bottom:10, data:['Mean（均值）','95% CI（置信区间）'] },
-        grid:{ left:60,right:40,top:60,bottom:60,containLabel:true },
-        xAxis:{ type:'category', data:categories, axisLabel:{ interval:0, rotate:20 } },
-        yAxis:{ type:'value', name:'Mean（均值）', splitLine:{ lineStyle:{ color:'#F3F4F6' } } },
+        legend:{
+          right:10,
+          bottom:10,
+          data:['Mean（均值）','95% CI（置信区间）'],
+          textStyle: {
+            fontSize: 12
+          }
+        },
+        grid:{
+          left:60,
+          right:40,
+          top:40,  // 调整顶部间距
+          bottom:60,
+          containLabel:true
+        },
+        xAxis:{
+          type:'category',
+          data:categories,
+          axisLabel:{
+            interval:0,
+            rotate:20,
+            fontSize: 11
+          }
+        },
+        yAxis:{
+          type:'value',
+          name:'Mean（均值）',
+          splitLine:{ lineStyle:{ color:'#F3F4F6' } },
+          nameTextStyle: {
+            fontSize: 11
+          }
+        },
         series:[
           { name:'Mean（均值）', type:'bar', data:means, barMaxWidth:40, label:{ show:true, position:'top', formatter:({value})=>this.fmt(value) } },
           { name:'95% CI（置信区间）', type:'custom', encode:{ x:0, y:[1,2] }, data: errData, renderItem, z: 10 }
         ]
       })
+    },
+    // 专门检查负数年龄的方法
+    checkNegativeAges() {
+      const negativeAges = this.raw.filter(record => {
+        const age = Number(record.age)
+        return !isNaN(age) && age < 0
+      })
+
+      if (negativeAges.length > 0) {
+        console.warn('发现负数年龄记录:', negativeAges)
+        // 可以选择自动修复
+        negativeAges.forEach(record => {
+          const index = this.raw.findIndex(r => r === record)
+          if (index !== -1) {
+            this.raw[index] = { ...record, age: null }
+          }
+        })
+        console.log('已自动修复负数年龄记录')
+      }
+
+      return negativeAges.length
     },
 
     // ---- Others ----
@@ -635,47 +1137,113 @@ export default {
 </script>
 
 <style scoped>
-:global(html, body, #app) { height: 100%; margin: 0; }
+:global(html, body, #app) {
+  height: 100%;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
 
 .dashboard {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #ffffff;
+  background: #f8fafc;
   color: #111827;
   padding: 16px 20px 20px;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 /* Header */
 .header {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 14px;
-  border-bottom: 1px solid #E5E7EB;
-  padding-bottom: 10px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+  gap: 16px;
 }
-.title .h1 { font-size: 26px; font-weight: 800; color: #0f172a; }
-.subtitle { margin-top: 6px; color: #6B7280; font-size: 14px; }
-.ops { display: flex; gap: 12px; align-items: center; }
-.ctrl { width: 180px; }
-.ctrl.wide { width: 420px; }
 
-/* Groups */
+.title .h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.subtitle {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.4;
+  max-width: 600px;
+}
+
+.ops {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ctrl {
+  width: 180px;
+  min-width: 160px;
+}
+
+.ctrl.wide {
+  width: 420px;
+  min-width: 300px;
+}
+
+/* Groups Container */
 .groups {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 24px;
+  padding-right: 4px;
 }
+
+.groups::-webkit-scrollbar {
+  width: 6px;
+}
+
+.groups::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.groups::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.groups::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Group Sections */
+.group {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
+}
+
 .group-title {
-  font-size: 16px;
-  font-weight: 700;
-  margin: 6px 2px 10px;
-  color: #111827;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  color: #1e293b;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #f1f5f9;
 }
 
 /* Selectors */
@@ -684,43 +1252,288 @@ export default {
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
 }
-.tips { color: #6B7280; font-size: 12px; }
+
+.tips {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.4;
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Cards Layout - A/B Test 特殊布局 */
+.ab-test-cards {
+  display: grid;
+  grid-template-columns: 1fr 2fr; /* 统计结果占1份，图表占2份 */
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.contingency-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.cards.single-card {
+  grid-template-columns: 1fr;
+}
 
 /* Cards */
-.cards {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 18px;
-}
 .card {
   background: #ffffff;
-  border: 1px solid #E5E7EB;
-  border-radius: 14px;
-  padding: 10px 12px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  min-height: 380px;
-  box-shadow: 0 1px 2px rgba(16,24,40,0.06), 0 1px 3px rgba(16,24,40,0.10);
+  min-height: 400px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
-.stat-card { min-height: 180px; }
+
+.card:hover {
+  box-shadow: 0 4px 6px rgba(15, 23, 42, 0.1);
+  border-color: #cbd5e1;
+}
+
+.stat-card {
+  min-height: 400px;
+}
+
+.chart-card {
+  min-height: 400px;
+}
+
+.card.full-width {
+  grid-column: 1 / -1;
+}
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #f8fafc;
+  border-radius: 12px 12px 0 0;
 }
-.card-title { font-size: 14px; font-weight: 600; color: #111827; }
+
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #334155;
+  margin: 0;
+}
+
+/* Stat Content */
+.stat-content {
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 3px solid #3b82f6;
+  transition: background-color 0.2s ease;
+}
+
+.stat-item:hover {
+  background: #f1f5f9;
+}
+
+.stat-item span {
+  font-weight: 500;
+  color: #475569;
+  font-size: 14px;
+}
+
+.stat-item:not(span) {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.stat-note {
+  color: #64748b;
+  font-size: 14px;
+  text-align: center;
+  padding: 20px;
+  font-style: italic;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 /* Chart container */
-.chart { flex: 1; min-height: 300px; }
+.chart {
+  flex: 1;
+  min-height: 320px;
+  padding: 8px;
+}
 
-/* Responsive */
+/* Responsive Design */
 @media (max-width: 1200px) {
-  .cards { grid-template-columns: 1fr; }
-  .ctrl.wide { width: 100%; }
+  .ab-test-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .cards.single-card {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 968px) {
+  .ab-test-cards {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .stat-card, .chart-card {
+    min-height: 350px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 12px 16px;
+    height: 100vh;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .title .h1 {
+    font-size: 20px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+  }
+
+  .ops {
+    justify-content: flex-start;
+  }
+
+  .ctrl, .ctrl.wide {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .group {
+    padding: 16px;
+  }
+
+  .selectors {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .cards {
+    gap: 16px;
+  }
+
+  .card {
+    min-height: 320px;
+  }
+
+  .chart-card {
+    min-height: 320px;
+  }
+
+  .stat-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .stat-item span {
+    font-size: 13px;
+  }
+
+  .stat-item:not(span) {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard {
+    padding: 8px 12px;
+  }
+
+  .group {
+    padding: 12px;
+  }
+
+  .group-title {
+    font-size: 16px;
+  }
+
+  .card-header {
+    padding: 12px 16px;
+  }
+
+  .stat-content {
+    padding: 16px;
+  }
+
+  .chart {
+    min-height: 280px;
+  }
+
+  .stat-card, .chart-card {
+    min-height: 300px;
+  }
+}
+
+/* Loading state enhancement */
+:deep(.el-loading-mask) {
+  border-radius: 12px;
+  background-color: rgba(248, 250, 252, 0.8);
+}
+
+/* Element Plus select styling enhancement */
+:deep(.el-select .el-input__inner) {
+  border-radius: 8px;
+}
+
+:deep(.el-select .el-input__wrapper) {
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+:deep(.el-select .el-input__wrapper:hover) {
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+}
+
+/* Button styling */
+:deep(.el-button) {
+  border-radius: 8px;
+  font-weight: 500;
 }
 </style>

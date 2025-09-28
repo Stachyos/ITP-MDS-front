@@ -3,66 +3,109 @@
     <Header />
 
     <div class="header">
-      <div class="title">
-        <div class="h1">All Charts Visualization（全量图表）</div>
-        <div class="subtitle">Global Filters by Gender/Age + Switch Pie/Bar Chart for Each（全局性别/年龄筛选 + 每图表独立切换饼图/柱状图）</div>
-      </div>
+      <div class="header-content">
+        <div class="title-section">
+          <h1 class="main-title">All Charts Visualization（全量图表）</h1>
+          <p class="subtitle">Global Filters by Gender/Age + Switch Pie/Bar Chart for Each（全局性别/年龄筛选 + 每图表独立切换饼图/柱状图）</p>
+        </div>
 
-      <!-- Top right: Global filters + Refresh -->
-      <div class="ops">
-        <el-select
-            v-model="globalSex"
-            size="large"
-            class="ctrl"
-            placeholder="Gender（性别）"
-            @change="renderAll"
-        >
-          <el-option v-for="s in sexOptions" :key="s" :label="s" :value="s" />
-        </el-select>
+        <!-- Top right: Global filters + Refresh -->
+        <div class="controls-section">
 
-        <el-select
-            v-model="globalAgeBucket"
-            size="large"
-            class="ctrl"
-            placeholder="Age Range（年龄区间）"
-            @change="renderAll"
-        >
-          <el-option v-for="ab in ageBucketOptions" :key="ab" :label="ab" :value="ab" />
-        </el-select>
+          <div class="filter-controls">
+            <el-select
+                v-model="globalSex"
+                size="large"
+                class="filter-select"
+                placeholder="Gender（性别）"
+                @change="renderAll"
+            >
+              <el-option v-for="s in sexOptions" :key="s" :label="s" :value="s" />
+            </el-select>
 
-        <el-button :loading="loading" @click="reload">Refresh（刷新）</el-button>
+            <el-select
+                v-model="globalAgeBucket"
+                size="large"
+                class="filter-select"
+                placeholder="Age Range（年龄区间）"
+                @change="renderAll"
+            >
+              <el-option v-for="ab in ageBucketOptions" :key="ab" :label="ab" :value="ab" />
+            </el-select>
+
+          </div>
+
+          <el-button
+              :loading="loading"
+              @click="reload"
+              class="refresh-btn"
+              type="primary"
+          >
+            <i class="refresh-icon"></i>
+            Refresh（刷新）
+          </el-button>
+        </div>
       </div>
     </div>
 
-    <div class="groups" v-loading="loading">
-      <div v-for="(cat, ci) in categoriesList" :key="cat.key" class="group">
-        <div class="group-title">{{ cat.label }}</div>
+    <div class="content" v-loading="loading">
+      <div class="groups" v-loading="loading">
+        <div v-for="(cat, ci) in categoriesList" :key="cat.key" class="group-section">
+          <div class="group-header">
+            <h2 class="group-title">{{ cat.label }}</h2>
+            <div class="group-divider"></div>
+          </div>
 
-        <div class="cards">
-          <div
-              v-for="mKey in cat.metrics"
-              :key="`${cat.key}-${mKey}`"
-              class="card"
-          >
-            <div class="card-header">
-              <div class="card-title">{{ metricLabel(mKey) }}</div>
-              <!-- Each chart has its own pie/bar toggle button -->
-              <div class="card-controls">
-                <el-button
-                    size="small"
-                    type="primary"
-                    plain
-                    @click="toggleChartTypeFor(chartId(ci, String(mKey)))"
-                >
-                  {{ getChartType(chartId(ci, String(mKey))) === 'pie' ? 'Switch to Bar Chart（切换为柱状图）' : 'Switch to Pie Chart（切回饼图）' }}
-                </el-button>
+          <div class="cards-grid">
+            <div
+                v-for="mKey in cat.metrics"
+                :key="`${cat.key}-${mKey}`"
+                class="chart-card"
+                :class="{
+            'active': activeChartId === chartId(ci, String(mKey)),
+            'inactive': activeChartId && activeChartId !== chartId(ci, String(mKey))
+          }"
+                @mouseenter="handleChartHover(ci, String(mKey))"
+                @mouseleave="handleChartLeave"
+            >
+              <div class="card-header">
+                <h3 class="card-title">{{ metricLabel(mKey) }}</h3>
+                <div class="card-controls">
+                  <el-button
+                      size="small"
+                      :type="getChartType(chartId(ci, String(mKey))) === 'pie' ? 'primary' : 'success'"
+                      @click="toggleChartTypeFor(chartId(ci, String(mKey)))"
+                      class="toggle-btn"
+                  >
+                    <i :class="getChartType(chartId(ci, String(mKey))) === 'pie' ? 'bar-chart-icon' : 'pie-chart-icon'"></i>
+                    {{ getChartType(chartId(ci, String(mKey))) === 'pie' ? 'Bar Chart' : 'Pie Chart' }}
+                  </el-button>
+                </div>
+              </div>
+
+              <div
+                  class="chart-container"
+                  :ref="(el) => registerEl(el, ci, String(mKey))"
+              ></div>
+
+              <!-- 悬停时显示的详细信息 -->
+              <div v-if="activeChartId === chartId(ci, String(mKey))" class="chart-details">
+                <div class="details-content">
+                  <h4>详细分析</h4>
+                  <p>{{ getChartDescription(mKey) }}</p>
+                  <div class="stats-info">
+                    <div class="stat-item">
+                      <span class="stat-label">数据总量:</span>
+                      <span class="stat-value">{{ getFilteredCount() }} 条记录</span>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-label">当前视图:</span>
+                      <span class="stat-value">{{ getChartType(chartId(ci, String(mKey))) === 'pie' ? '饼状图' : '柱状图' }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-
-            <div
-                class="chart"
-                :ref="(el) => registerEl(el, ci, String(mKey))"
-            ></div>
           </div>
         </div>
       </div>
@@ -84,8 +127,24 @@ export default {
 
   data() {
     return {
+      activeChartId: null, // 当前激活的图表ID
+      hoverTimer: null, // 悬停计时器
+      hoverDelay: 900, // 悬停延迟时间（毫秒）
+      leaveDelay: 300,  // 离开延迟时间
       loading: false,
       raw: [],
+      // 板块可见性控制
+      categoryVisibility: {
+        'demographic': true,
+        'lipid': true,
+        'renal_vitals': true
+      },
+
+      // 单个图表可见性控制 { [chartId]: boolean }
+      chartVisibility: {},
+
+      // 控制面板展开状态
+      controlPanelExpanded: false,
 
       // Global filters
       globalSex: '全部 (All)',
@@ -146,6 +205,216 @@ export default {
   },
 
   methods: {
+    // 处理图表悬停
+    handleChartHover(catIndex, metricKey) {
+      const chartId = this.chartId(catIndex, metricKey)
+
+      // 清除之前的计时器
+      if (this.hoverTimer) {
+        clearTimeout(this.hoverTimer)
+      }
+
+      // 设置新的计时器，实现平滑过渡
+      this.hoverTimer = setTimeout(() => {
+        this.activeChartId = chartId
+        this.$nextTick(() => {
+          if (this.getChartType(chartId) === 'pie') {
+            this.renderBarPreview(chartId)
+          }
+        })
+      }, 200)
+    },
+
+    // 处理鼠标离开
+    handleChartLeave() {
+      if (this.hoverTimer) {
+        clearTimeout(this.hoverTimer)
+      }
+      this.hoverTimer = setTimeout(() => {
+        this.activeChartId = null
+      }, 300)
+    },
+
+    // 渲染柱状图预览
+    renderBarPreview(chartId) {
+      if (!this.$refs.previewChart) return
+
+      // 销毁之前的预览图表
+      const existingChart = echarts.getInstanceByDom(this.$refs.previewChart)
+      if (existingChart) {
+        existingChart.dispose()
+      }
+
+      const chart = echarts.init(this.$refs.previewChart)
+      const [ci, metricKey] = chartId.replace(/^c/, '').split('-')
+      const filtered = this.applyGlobalFilters(this.raw)
+      const titleText = this.metricLabel(metricKey)
+      const items = filtered.length ? this.makeItems(metricKey, filtered) : [{ name: '暂无数据 (No data)', value: 1 }]
+
+      const categories = items.map(d => d.name)
+      const values = items.map(d => d.value)
+
+      chart.setOption({
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        grid: { left: 60, right: 30, top: 20, bottom: 40, containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: categories,
+          axisLabel: {
+            interval: 0,
+            rotate: 45,
+            color: '#374151',
+            fontSize: 12
+          },
+          axisLine: { lineStyle: { color: '#E5E7EB' } }
+        },
+        yAxis: {
+          type: 'value',
+          name: '数量',
+          axisLabel: { color: '#374151', fontSize: 12 },
+          splitLine: { lineStyle: { color: '#F3F4F6' } },
+          axisLine: { lineStyle: { color: '#E5E7EB' } }
+        },
+        series: [{
+          name: titleText,
+          type: 'bar',
+          data: values,
+          barMaxWidth: 30,
+          label: { show: true, position: 'top', color: '#374151', fontSize: 11 },
+          itemStyle: {
+            borderRadius: [4,4,0,0],
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: '#3b82f6' },
+              { offset: 1, color: '#1d4ed8' }
+            ])
+          }
+        }]
+      })
+    },
+
+    // 切换到柱状图
+    switchToBar(chartId) {
+      this.toggleChartTypeFor(chartId)
+      this.activeChartId = null
+    },
+// 计算正常值比例
+    calculateNormalRatio(metricKey, filteredData) {
+      if (filteredData.length === 0) return 0;
+
+      const m = this.metricDef(metricKey);
+      if (!m) return 0;
+
+      let normalCount = 0;
+
+      switch (metricKey) {
+        case 'totalCholesterol':
+          normalCount = filteredData.filter(r => r[m.key] < 5.2).length;
+          break;
+        case 'triglyceride':
+          normalCount = filteredData.filter(r => r[m.key] < 1.7).length;
+          break;
+        case 'ldlC':
+          normalCount = filteredData.filter(r => r[m.key] < 2.6).length;
+          break;
+        case 'hdlC':
+          // 高密度脂蛋白：男性>1.0，女性>1.3
+          normalCount = filteredData.filter(r => {
+            const sex = r.sex;
+            const value = r[m.key];
+            if (sex === '男 (Male)' || sex === '男') return value > 1.0;
+            if (sex === '女 (Female)' || sex === '女') return value > 1.3;
+            return value > 1.0; // 默认使用男性标准
+          }).length;
+          break;
+        case 'pulse':
+          normalCount = filteredData.filter(r => r[m.key] >= 60 && r[m.key] <= 100).length;
+          break;
+        case 'diastolicBp':
+          normalCount = filteredData.filter(r => r[m.key] < 80).length;
+          break;
+        case 'bun':
+          normalCount = filteredData.filter(r => r[m.key] >= 3 && r[m.key] <= 7).length;
+          break;
+        case 'uricAcid':
+          // 尿酸：男性<420，女性<360
+          normalCount = filteredData.filter(r => {
+            const sex = r.sex;
+            const value = r[m.key];
+            if (sex === '男 (Male)' || sex === '男') return value < 420;
+            if (sex === '女 (Female)' || sex === '女') return value < 360;
+            return value < 420; // 默认使用男性标准
+          }).length;
+          break;
+        case 'creatinine':
+          // 肌酐：男性<97，女性<133
+          normalCount = filteredData.filter(r => {
+            const sex = r.sex;
+            const value = r[m.key];
+            if (sex === '男 (Male)' || sex === '男') return value < 97;
+            if (sex === '女 (Female)' || sex === '女') return value < 133;
+            return value < 97; // 默认使用男性标准
+          }).length;
+          break;
+        case 'hypertensionHistory':
+          normalCount = filteredData.filter(r => !r[m.key]).length; // 无高血压史为正常
+          break;
+        case 'age':
+          // 年龄：18-80岁视为正常
+          normalCount = filteredData.filter(r => r[m.key] >= 18 && r[m.key] <= 80).length;
+          break;
+        case 'sex':
+        case 'vldlC':
+          // 对于分类数据或没有明确正常范围的数据，返回50%作为默认值
+          return 0.5;
+        default:
+          return 0.5;
+      }
+
+      return normalCount / filteredData.length;
+    },
+    // 获取图表描述和计算正常值比例
+    getChartDescription(metricKey) {
+      const filteredData = this.applyGlobalFilters(this.raw);
+      const totalCount = filteredData.length;
+
+      if (totalCount === 0) {
+        return '暂无数据可供分析。';
+      }
+
+      // 计算正常值比例
+      const normalRatio = this.calculateNormalRatio(metricKey, filteredData);
+      const normalPercentage = (normalRatio * 100).toFixed(1);
+
+      const descriptions = {
+        'totalCholesterol': `总胆固醇是血液中所有脂蛋白所含胆固醇的总和。在当前筛选条件下，正常值（<5.2mmol/L）占比 ${normalPercentage}%。`,
+        'triglyceride': `甘油三酯是血液中的脂肪成分。在当前筛选条件下，理想水平（<1.7mmol/L）占比 ${normalPercentage}%。`,
+        'hdlC': `高密度脂蛋白被称为"好胆固醇"，有助于清除血管中的胆固醇。在当前筛选条件下，正常水平占比 ${normalPercentage}%。`,
+        'ldlC': `低密度脂蛋白被称为"坏胆固醇"，是动脉粥样硬化的主要风险因素。在当前筛选条件下，正常水平（<2.6mmol/L）占比 ${normalPercentage}%。`,
+        'vldlC': `极低密度脂蛋白主要运输内源性甘油三酯。在当前筛选条件下，正常水平占比 ${normalPercentage}%。`,
+        'pulse': `脉搏反映心脏跳动频率。在当前筛选条件下，正常静息心率（60-100次/分钟）占比 ${normalPercentage}%。`,
+        'diastolicBp': `舒张压是心脏舒张时动脉血管的最低压力。在当前筛选条件下，正常水平（<80mmHg）占比 ${normalPercentage}%。`,
+        'bun': `尿素氮是蛋白质代谢的产物，反映肾功能状况。在当前筛选条件下，正常水平占比 ${normalPercentage}%。`,
+        'uricAcid': `尿酸是嘌呤代谢的终产物。在当前筛选条件下，正常水平占比 ${normalPercentage}%。`,
+        'creatinine': `肌酐是肌肉代谢产物，是评估肾功能的重要指标。在当前筛选条件下，正常水平占比 ${normalPercentage}%。`,
+        'age': `年龄是健康评估的基础因素。在当前筛选条件下，数据分布正常占比 ${normalPercentage}%。`,
+        'sex': `性别差异影响疾病风险和生理指标正常范围。当前筛选条件下的性别分布如上所示。`,
+        'hypertensionHistory': `高血压史是心血管疾病的重要风险因素。在当前筛选条件下，无高血压史占比 ${normalPercentage}%。`
+      }
+
+      return descriptions[metricKey] || `该指标反映了相关的健康信息。在当前筛选条件下，正常值占比 ${normalPercentage}%。`;
+    },
+
+    // 获取过滤后的数据数量
+    getFilteredCount() {
+      return this.applyGlobalFilters(this.raw).length
+    },
+
+    // 获取激活图表的标签
+    getActiveChartLabel() {
+      if (!this.activeChartId) return ''
+      const [ci, metricKey] = this.activeChartId.replace(/^c/, '').split('-')
+      return this.metricLabel(metricKey)
+    },
     // --- Common ---
     chartId(catIndex, metricKey) {
       return `c${catIndex}-${metricKey}`
@@ -205,7 +474,7 @@ export default {
       if (val == null || Number.isNaN(val)) return '未知 (Unknown)'
       for (let i = 0; i < cuts.length; i++) {
         if (val < cuts[i]) {
-          const left = i === 0 ? '-∞' : String(cuts[i-1])
+          const left = i === 0 ? 0 : String(cuts[i-1])
           const right = String(cuts[i])
           return `${left}~${right}`
         }
@@ -216,27 +485,64 @@ export default {
     bucketLabels(cuts) {
       const labels = []
       for (let i = 0; i < cuts.length; i++) {
-        if (i === 0) labels.push(`-∞~${cuts[i]}`)
+        if (i === 0) labels.push(`0~${cuts[i]}`)
         else labels.push(`${cuts[i-1]}~${cuts[i]}`)
       }
       labels.push(`${cuts[cuts.length - 1]}+`)
       return labels
     },
+    // 确保年龄区间计算正确
     ageBucket(n) {
-      if (n == null) return '未知 (Unknown)'
-      const cuts = [18,30,40,50,60,70,80]
-      return this.bucketize(n, cuts)
+      // 更严格的空值检查
+      if (n == null || n === '' || n === undefined) return '未知 (Unknown)'
+
+      const age = Number(n)
+      // 更全面的有效性检查
+      if (isNaN(age) || !isFinite(age) || age < 0) return '未知 (Unknown)'
+
+      const cuts = [18, 30, 40, 50, 60, 70, 80]
+      return this.bucketize(age, cuts)
     },
 
+// 添加性别标准化方法
+    normalizeSex(sex) {
+      if (!sex) return '未知 (Unknown)'
+
+      const sexStr = String(sex).toLowerCase().trim()
+
+      if (sexStr.includes('男') || sexStr.includes('male')) return '男 (Male)'
+      if (sexStr.includes('女') || sexStr.includes('female')) return '女 (Female)'
+      if (sexStr.includes('其他') || sexStr.includes('other')) return '其他 (Other)'
+
+      return '未知 (Unknown)'
+    },
     // Apply global filters
     applyGlobalFilters(records) {
       let arr = records || []
+
+      // 性别筛选 - 添加更灵活的匹配
       if (this.globalSex && this.globalSex !== '全部 (All)') {
-        arr = arr.filter(r => (r?.sex ?? '未知 (Unknown)') === this.globalSex)
+        arr = arr.filter(r => {
+          const recordSex = r?.sex ?? '未知 (Unknown)'
+          // 支持多种格式的性别匹配
+          return this.normalizeSex(recordSex) === this.normalizeSex(this.globalSex)
+        })
       }
+
+      // 年龄区间筛选 - 修正逻辑
       if (this.globalAgeBucket && this.globalAgeBucket !== '全部 (All)') {
-        arr = arr.filter(r => this.ageBucket(r?.age ?? null) === this.globalAgeBucket)
+        arr = arr.filter(r => {
+          const age = r?.age ?? null
+          const recordAgeBucket = this.ageBucket(age)
+          return recordAgeBucket === this.globalAgeBucket
+        })
       }
+
+      console.log('筛选后数据量:', arr.length, '筛选条件:', {
+        sex: this.globalSex,
+        ageBucket: this.globalAgeBucket
+      })
+
       return arr
     },
 
@@ -287,25 +593,40 @@ export default {
         orient: 'vertical'
       }
 
+      // 特殊处理基本信息组和血脂相关组的饼图大小
+      const isDemographics = catIndex === 0; // 第一个分组是基本信息
+      const isLipidRelated = catIndex === 1; // 第二个分组是血脂相关
+      const isSmallChart = isDemographics || isLipidRelated;
+
+      const pieRadius = isSmallChart ? ['45%', '65%'] : ['55%', '78%'];
+      const pieCenter = isSmallChart ? ['50%', '52%'] : ['50%', '56%'];
+
       if (chartType === 'pie') {
         chart.setOption({
           title: {
             text: titleText,
             left: 'center',
             top: 8,
-            textStyle: { fontSize: 15, color: '#111827' }
+            textStyle: { fontSize: isSmallChart ? 14 : 15, color: '#111827' }
           },
           tooltip: { trigger: 'item' },
-          legend: { ...legendCommon, data: items.map(d => d.name), textStyle: { color: '#374151' } },
+          legend: {
+            ...legendCommon,
+            data: items.map(d => d.name),
+            textStyle: { color: '#374151' },
+            // 小尺寸图表图例位置调整
+            ...(isSmallChart && { right: 5, bottom: 5 })
+          },
           series: [{
             type: 'pie',
-            radius: ['55%','78%'],
-            center: ['50%','56%'],
+            radius: pieRadius,
+            center: pieCenter,
             label: { show: false },
             data: items
           }]
         })
       } else {
+        // 柱状图配置保持不变
         const categories = items.map(d => d.name)
         const values = items.map(d => d.value)
         chart.setOption({
@@ -313,7 +634,7 @@ export default {
             text: titleText,
             left: 'center',
             top: 8,
-            textStyle: { fontSize: 15, color: '#111827' }
+            textStyle: { fontSize: isDemographics ? 14 : 15, color: '#111827' }
           },
           tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
           legend: { ...legendCommon, data: [titleText], textStyle: { color: '#374151' } },
@@ -350,6 +671,13 @@ export default {
       Object.keys(this.chartMap).forEach(id => this.disposeOne(id))
     },
 
+    // 获取正常值比例（百分比形式）
+    getNormalRatio(metricKey) {
+      const filteredData = this.applyGlobalFilters(this.raw);
+      const ratio = this.calculateNormalRatio(metricKey, filteredData);
+      return (ratio * 100).toFixed(1);
+    },
+
     handleResize() {
       Object.values(this.chartMap).forEach(ch => {
         try { ch.resize() } catch {}
@@ -360,66 +688,207 @@ export default {
 </script>
 
 <style scoped>
-:global(html, body, #app) { height: 100%; margin: 0; }
+:global(html, body, #app) {
+  height: 100%;
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
 
 .dashboard {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #ffffff;
-  color: #111827;              /* Gray text */
-  padding: 16px 20px 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  color: #1e293b;
+  padding: 0;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
-/* Top */
+/* Header Section */
 .header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  margin-bottom: 14px;
-  border-bottom: 1px solid #E5E7EB; /* Light gray line */
-  padding-bottom: 10px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  padding: 24px 32px;
 }
-.title .h1 { font-size: 26px; font-weight: 800; color: #0f172a; }
-.subtitle { margin-top: 6px; color: #6B7280; font-size: 14px; }
-.ops { display: flex; gap: 12px; align-items: center; }
-.ctrl { width: 160px; }
 
-/* Container */
-.groups {
+.header-content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  max-width: 100%;
+  gap: 32px;
+}
+
+.title-section {
+  flex: 1;
+  min-width: 0;
+}
+
+.main-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+  background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  margin: 0;
+  color: #64748b;
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.controls-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.filter-select {
+  width: 180px;
+}
+
+.filter-select :deep(.el-input__inner) {
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.filter-select :deep(.el-input__inner:hover),
+.filter-select :deep(.el-input__inner:focus) {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.refresh-btn {
+  border-radius: 12px;
+  padding: 10px 20px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.refresh-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.refresh-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='currentColor' d='M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z'/%3E%3C/svg%3E");
+}
+
+/* Content Section */
+.content {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  padding: 24px 32px;
+  background: #f8fafc;
+}
+
+.groups {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 32px;
+  max-width: 100%;
 }
 
-/* Group Title */
+/* Group Section */
+.group-section {
+  background: transparent;
+}
+
+.group-header {
+  margin-bottom: 20px;
+}
+
 .group-title {
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 700;
-  margin: 6px 2px 10px;
-  color: #111827;
+  color: #1e293b;
+  margin: 0 0 12px 0;
+  position: relative;
+  padding-left: 16px;
 }
 
-/* Cards: White background + Shadow + Light gray border; Two-column larger layout */
-.cards {
+.group-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 20px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 2px;
+}
+
+.group-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, #e2e8f0 50%, transparent 100%);
+}
+
+/* Cards Grid */
+.cards-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+  gap: 24px;
 }
 
-.card {
+/* Chart Card */
+.chart-card {
   background: #ffffff;
-  border: 1px solid #E5E7EB;
-  border-radius: 14px;
-  padding: 10px 12px 12px;
+  border: 1px solid #f1f5f9;
+  border-radius: 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   min-height: 380px;
-  box-shadow: 0 1px 2px rgba(16,24,40,0.06), 0 1px 3px rgba(16,24,40,0.10);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.chart-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.chart-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(15, 23, 42, 0.1);
+  border-color: #e2e8f0;
+}
+
+.chart-card:hover::before {
+  opacity: 1;
 }
 
 /* Card Header */
@@ -427,21 +896,189 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
 }
+
 .card-title {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
-  color: #111827;
+  color: #1e293b;
+  margin: 0;
+  line-height: 1.4;
 }
-.card-controls { display: flex; gap: 8px; align-items: center; }
+
+.card-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.toggle-btn {
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  padding: 6px 12px;
+}
+
+.toggle-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+}
+
+.bar-chart-icon,
+.pie-chart-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+  background: currentColor;
+  vertical-align: -2px;
+}
+
+.bar-chart-icon {
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='currentColor' d='M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z'/%3E%3C/svg%3E");
+}
+
+.pie-chart-icon {
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='currentColor' d='M11 2v20c-5.1-.5-9-4.8-9-10s3.9-9.5 9-10zm2.03 0v8.99H22c-.47-4.74-4.24-8.52-8.97-8.99zm0 11.01V22c4.74-.47 8.5-4.25 8.97-8.99h-8.97z'/%3E%3C/svg%3E");
+}
 
 /* Chart Container */
-.chart { flex: 1; min-height: 300px; }
+.chart-container {
+  flex: 1;
+  min-height: 300px;
+  border-radius: 8px;
+  background: #fafbfc;
+}
 
-/* Small screen: single column */
+/* Responsive Design */
 @media (max-width: 1200px) {
-  .cards { grid-template-columns: 1fr; }
+  .cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .header-content {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .controls-section {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .filter-controls {
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 20px 24px;
+  }
+
+  .content {
+    padding: 20px 24px;
+  }
+
+  .main-title {
+    font-size: 24px;
+  }
+
+  .cards-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .chart-card {
+    min-height: 340px;
+    padding: 16px;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .card-controls {
+    align-self: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 16px 20px;
+  }
+
+  .content {
+    padding: 16px 20px;
+  }
+
+  .filter-controls {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .filter-select {
+    width: 100%;
+  }
+}
+/* 特殊处理基本信息组的卡片布局 */
+.group-section:first-child .cards-grid {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.group-section:first-child .chart-card {
+  min-height: 320px;
+}
+
+
+/* 特殊处理血脂相关组的卡片布局 - 三个一行 */
+.group-section:nth-child(2) .cards-grid {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.group-section:nth-child(2) .chart-card {
+  min-height: 320px;
+}
+
+/* 图表卡片悬停效果 */
+.chart-card {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.chart-card.active {
+  transform: scale(1.05);
+  z-index: 10;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
+  border-color: #3b82f6;
+}
+
+.chart-card.inactive {
+  transform: scale(0.9);
+  opacity: 0.6;
+  filter: blur(1px);
+}
+
+
+
+/* 响应式调整 */
+@media (max-width: 1200px) {
+  .group-section:first-child .cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .group-section:first-child .cards-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
