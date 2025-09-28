@@ -23,3 +23,4 @@ export function savePermission(data) {
 export function deletePermission(permissionId) {
     return request.delete(`/api/permissions/delete/${permissionId}`)
 }
+

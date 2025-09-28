@@ -15,7 +15,7 @@
             <el-input v-model="keyword" placeholder="筛选关键词（按姓名）" clearable style="width: 220px" />
             <el-button @click="fetchList" :loading="loading">刷新</el-button>
             <!-- 新增：导入按钮 -->
-            <el-button @click="onPickFile" :loading="importing">导入数据</el-button>
+            <el-button v-if="canEditAll" @click="onPickFile" :loading="importing">导入数据</el-button>
             <!-- 隐藏的文件选择框 -->
             <input
                 ref="fileInput"
@@ -26,7 +26,7 @@
             />
 
             <el-button @click="downloadTemplate" :loading="downloading">下载模板</el-button>
-            <el-button type="primary" @click="openCreate" :loading="loading">新建</el-button>
+            <el-button v-if="canEditAll" type="primary" @click="openCreate" :loading="loading">新建</el-button>
           </div>
         </div>
 
@@ -64,12 +64,13 @@
           <el-table-column label="操作" width="220" fixed="right">
             <template #default="{ row }">
               <div class="action-buttons">
-                <el-button size="small" type="primary" plain @click.stop="openEdit(row)">编辑</el-button>
-                <el-button size="small" type="danger" plain @click.stop="deleteRow(row)">删除</el-button>
+                     <el-button v-if="canEditAll" size="small" type="primary" plain @click.stop="openEdit(row)">编辑</el-button>
+                     <el-button v-if="canEditAll" size="small" type="danger" plain @click.stop="deleteRow(row)">删除</el-button>
                 <el-button size="small" plain @click.stop="exportOnePDF(row)">生成</el-button>
               </div>
             </template>
           </el-table-column>
+
 
         </el-table>
 
@@ -192,6 +193,23 @@ import {
 import { assessMetrics } from '@/utils/health/assess.js'
 import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 
+import { getUserId } from '@/api/User.js'
+import { getPermissionByUserId } from '@/api/Permission.js'
+
+const fetchPermissions = async () => {
+    try {
+        const r1 = await getUserId()
+            const uidStr = typeof r1 === 'string' ? r1 : (r1?.data ?? r1)
+            const userId = Number(uidStr)
+            if (!Number.isFinite(userId)) return
+        const r2 = await getPermissionByUserId(userId)
+            const vo = (r2 && r2.data !== undefined) ? r2.data : r2
+        permissions.value.optionEdit = !!vo?.optionEdit
+          } catch {}
+  }
+
+const permissions = ref({ optionEdit: false })
+const canEditAll = computed(() => !!permissions.value.optionEdit)
 const loading = ref(false)
 const saving  = ref(false)
 const downloading = ref(false)
@@ -795,7 +813,10 @@ const exportOnePDF = async (row) => {
 }
 
 
-onMounted(fetchList)
+ onMounted(async () => {
+     await fetchPermissions()
+     await fetchList()
+  })
 </script>
 
 <style scoped>

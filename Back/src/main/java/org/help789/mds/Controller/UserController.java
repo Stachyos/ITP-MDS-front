@@ -8,6 +8,7 @@ import org.help789.mds.Entity.Vo.RegisterReq;
 import org.help789.mds.Service.EmailCodeService;
 import org.help789.mds.Service.MailSenderService;
 import org.help789.mds.Service.UserService;
+import org.help789.mds.Utils.ThreadLocalUtil;
 import org.help789.mds.Utils.pojo.Result;
 import org.help789.mds.logging.LogAction;
 import org.help789.mds.repository.UserRepository;
@@ -114,4 +115,15 @@ public class UserController {
         String rip = req.getHeader("X-Real-IP");
         return (rip != null && !rip.isBlank()) ? rip : req.getRemoteAddr();
     }
+
+    @GetMapping(
+            value = "/getUserId",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public Result<String> getUserId() {
+        System.out.println(userService.getUserId());
+        return userService.getUserId(); // 请确保返回的是 Result<String>
+    }
+
+
 }

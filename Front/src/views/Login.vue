@@ -211,6 +211,7 @@ async function onSendCode() {
   }
 }
 
+
 /* ========== submit login ========== */
 async function onSubmit() {
   try {
@@ -230,8 +231,7 @@ async function onSubmit() {
       // 1) 先写入 Pinia / Storage（保持你原逻辑）
       const tokenStore = useTokenStore(pinia)
       tokenStore.setToken(token, form.remember)
-      const store = form.remember ? localStorage : sessionStorage
-      store.setItem('auth_token', token)
+
 
       // 2) 立刻把 token 写进 axios 默认头，保证后续所有请求都会自动携带
       setAuthToken(token)

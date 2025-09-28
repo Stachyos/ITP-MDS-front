@@ -3,21 +3,55 @@
     <div class="header-left">
       <img src="@/assets/logo_blue.png" alt="logo" class="logo" />
       <h2 class="system-title">Health Big Data Application</h2>
+
+      <!-- ✅ 关键：router 模式 + 以路由 path 作为 index -->
       <el-menu
-          :default-active="activeIndex"
+          :default-active="$route.path"
+          router
           mode="horizontal"
           class="nav-menu"
-          @select="handleSelect"
           :ellipsis="false"
       >
-        <el-menu-item index="1">Home</el-menu-item>
-        <el-sub-menu index="2">
+        <!-- 首页 -->
+        <el-menu-item
+            v-if= true
+            index="/HealthRecordShow"
+        >
+          Home
+        </el-menu-item>
+
+        <!-- Visualization 子菜单 -->
+        <el-sub-menu v-if="canVisualization" index="__vis__">
           <template #title>Visualization</template>
-          <el-menu-item index="2-1">Analysis</el-menu-item>
-          <el-menu-item index="2-2">Display</el-menu-item>
+          <el-menu-item
+              v-if="permissions.accessVisualPage"
+              index="/analysis"
+          >
+            Analysis
+          </el-menu-item>
+          <el-menu-item
+              v-if="permissions.accessDisplayPage"
+              index="/visual"
+          >
+            Display
+          </el-menu-item>
         </el-sub-menu>
-        <el-menu-item index="3">Permission Management</el-menu-item>
-        <el-menu-item index="4">Audit Logs</el-menu-item> <!-- ✅ 新增 -->
+
+        <!-- 权限管理 -->
+        <el-menu-item
+            v-if="permissions.permissionManagement"
+            index="/permissionManagement"
+        >
+          Permission Management
+        </el-menu-item>
+
+        <!-- 审计日志（按你目前用 optionEdit 控制） -->
+        <el-menu-item
+            v-if="permissions.accessLogPage"
+            index="/auditLogs"
+        >
+          Audit Logs
+        </el-menu-item>
       </el-menu>
     </div>
 
@@ -34,7 +68,6 @@
               <el-icon><User /></el-icon>
               个人中心
             </el-dropdown-item>
-
             <el-dropdown-item divided @click="handleLogout">
               <el-icon><SwitchButton /></el-icon>
               退出登录
@@ -47,40 +80,74 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, watch, toRaw, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import {
-  User,
-  SwitchButton,
-  ArrowDown
-} from '@element-plus/icons-vue'
+import { User, SwitchButton, ArrowDown } from '@element-plus/icons-vue'
+import { getPermissionByUserId } from '@/api/Permission.js'
+import { getUserId } from '@/api/User.js'
 
 const router = useRouter()
-const activeIndex = ref('1')
 const username = ref('管理员')
 const avatarUrl = ref('https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png')
 
-// 菜单和路由的映射关系
-const menuRoutes = {
-  '1': '/HealthRecordShow',
-  '2-1': '/analysis',
-  '2-2': '/visual',
-  '3': '/permissionManagement',
-  '4': '/auditLogs'  // ✅ 新增日志页面路由
+const permissions = ref({
+  accessLogPage: false,
+  accessVisualPage: false,
+  accessDisplayPage: false,
+  permissionManagement: false,
+  optionEdit: false
+})
+
+const canVisualization = computed(
+    () => !!(permissions.value.accessVisualPage || permissions.value.accessDisplayPage)
+)
+
+const printPerms = () => {
+  console.group('[Permission] Current user permissions')
+  console.table(permissions.value)
+  console.log('Raw JSON:\n', JSON.stringify(permissions.value, null, 2))
+  console.groupEnd()
+  window.__PERMS__ = toRaw(permissions.value)
 }
 
-const handleSelect = (key) => {
-  console.log('Selected menu:', key)
-  const path = menuRoutes[key]
-  if (path) {
-    router.push(path)
+onMounted(async () => {
+  try {
+    // 兼容：getUserId 可能直接返回字符串或 { data: "1" }
+    const resp1 = await getUserId()
+    const uidStr = (typeof resp1 === 'string') ? resp1 : (resp1?.data ?? resp1)
+    const userId = Number(uidStr)
+    if (!Number.isFinite(userId)) {
+      console.error('[getUserId] invalid id:', resp1)
+      return
+    }
+
+    // 兼容：权限可能直接对象或 { data: vo }
+    const respPerm = await getPermissionByUserId(userId)
+    const vo = (respPerm && respPerm.data !== undefined) ? respPerm.data : respPerm
+
+    permissions.value = {
+      accessLogPage: !!vo?.accessLogPage,
+      accessVisualPage: !!vo?.accessVisualPage,
+      accessDisplayPage: !!vo?.accessDisplayPage,
+      permissionManagement: !!vo?.permissionManagement,
+      optionEdit: !!vo?.optionEdit
+    }
+
+    printPerms()
+  } catch (e) {
+    console.error('[Header] load permissions failed:', e)
   }
-}
+})
+
+watch(permissions, () => {
+  console.info('[Permission] permissions updated')
+  printPerms()
+}, { deep: true })
 
 const handleLogout = () => {
   localStorage.removeItem('auth_token')
   sessionStorage.removeItem('auth_token')
-  router.push('/login')
+  router.push('/login').catch(() => {})
 }
 </script>
 
@@ -110,14 +177,9 @@ const handleLogout = () => {
   font-size: 20px;
 }
 
-.logo {
-  width: 36px;   /* 你可以根据需求调整大小 */
-  height: 36px;
-}
+.logo { width: 36px; height: 36px; }
 
-.nav-menu {
-  border-bottom: none;
-}
+.nav-menu { border-bottom: none; }
 
 :deep(.nav-menu .el-sub-menu__title),
 :deep(.nav-menu .el-menu-item) {
@@ -130,9 +192,7 @@ const handleLogout = () => {
   gap: 20px;
 }
 
-.user-dropdown {
-  cursor: pointer;
-}
+.user-dropdown { cursor: pointer; }
 
 .el-dropdown-link {
   display: flex;
@@ -140,16 +200,9 @@ const handleLogout = () => {
   gap: 8px;
 }
 
-.user-avatar {
-  background-color: #409EFF;
-}
+.user-avatar { background-color: #409EFF; }
 
-.username {
-  font-weight: 500;
-  color: #606266;
-}
+.username { font-weight: 500; color: #606266; }
 
-.dropdown-icon {
-  color: #909399;
-}
+.dropdown-icon { color: #909399; }
 </style>
