@@ -176,7 +176,6 @@
           >
             <el-option v-for="m in numericMetricOptions" :key="m.key" :label="m.label" :value="m.key" />
           </el-select>
-          <div class="tips">Buckets: -∞~18, 18~30, …, 80+ (mean per bucket)</div>
         </div>
 
         <div class="cards single-card">
@@ -443,12 +442,24 @@ export default {
     // ---- Utils ----
     metricDef(key){ return this.metrics.find(m=>m.key===key) },
     metricLabel(key){ return this.metricDef(key)?.label || key },
-    bucketize(val, cuts){ if (val==null||Number.isNaN(val)) return 'Unknown'; for(let i=0;i<cuts.length;i++){ if(val<cuts[i]) return `${i===0?'-∞':cuts[i-1]}~${cuts[i]}` } return `${cuts[cuts.length-1]}+` },
-    bucketLabels(cuts){
-      const a=[]
-      for(let i=0;i<cuts.length;i++){ a.push(i===0?`-∞~${cuts[i]}`:`${cuts[i-1]}~${cuts[i]}`) }
-      a.push(`${cuts[cuts.length-1]}+`)
-      return a
+    bucketize(val, cuts) {
+      if (val == null || Number.isNaN(val)) return 'Unknown';
+      // 特殊处理第一个区间：0~cuts[0]
+      if (val < cuts[0]) return `0~${cuts[0]}`;
+      for (let i = 1; i < cuts.length; i++) {
+        if (val < cuts[i]) return `${cuts[i - 1]}~${cuts[i]}`;
+      }
+      return `${cuts[cuts.length - 1]}+`;
+    },
+    bucketLabels(cuts) {
+      const labels = [];
+      // 特殊处理第一个区间：0~cuts[0]
+      labels.push(`0~${cuts[0]}`);
+      for (let i = 1; i < cuts.length; i++) {
+        labels.push(`${cuts[i - 1]}~${cuts[i]}`);
+      }
+      labels.push(`${cuts[cuts.length - 1]}+`);
+      return labels;
     },
     ageBucket(n){ if(n==null) return 'Unknown'; return this.bucketize(n,[18,30,40,50,60,70,80]) },
     applyGlobalFilters(records){
