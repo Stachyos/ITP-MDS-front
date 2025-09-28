@@ -5,19 +5,18 @@
     <div class="header">
       <div class="header-content">
         <div class="title-section">
-          <h1 class="main-title">All Charts Visualization（全量图表）</h1>
-          <p class="subtitle">Global Filters by Gender/Age + Switch Pie/Bar Chart for Each（全局性别/年龄筛选 + 每图表独立切换饼图/柱状图）</p>
+          <h1 class="main-title">All Charts Visualization</h1>
+          <p class="subtitle">Global filters by gender/age + per-chart Pie/Bar toggle</p>
         </div>
 
         <!-- Top right: Global filters + Refresh -->
         <div class="controls-section">
-
           <div class="filter-controls">
             <el-select
                 v-model="globalSex"
                 size="large"
                 class="filter-select"
-                placeholder="Gender（性别）"
+                placeholder="Gender"
                 @change="renderAll"
             >
               <el-option v-for="s in sexOptions" :key="s" :label="s" :value="s" />
@@ -27,12 +26,11 @@
                 v-model="globalAgeBucket"
                 size="large"
                 class="filter-select"
-                placeholder="Age Range（年龄区间）"
+                placeholder="Age Range"
                 @change="renderAll"
             >
               <el-option v-for="ab in ageBucketOptions" :key="ab" :label="ab" :value="ab" />
             </el-select>
-
           </div>
 
           <el-button
@@ -42,7 +40,7 @@
               type="primary"
           >
             <i class="refresh-icon"></i>
-            Refresh（刷新）
+            Refresh
           </el-button>
         </div>
       </div>
@@ -62,9 +60,9 @@
                 :key="`${cat.key}-${mKey}`"
                 class="chart-card"
                 :class="{
-            'active': activeChartId === chartId(ci, String(mKey)),
-            'inactive': activeChartId && activeChartId !== chartId(ci, String(mKey))
-          }"
+                active: activeChartId === chartId(ci, String(mKey)),
+                inactive: activeChartId && activeChartId !== chartId(ci, String(mKey))
+              }"
                 @mouseenter="handleChartHover(ci, String(mKey))"
                 @mouseleave="handleChartLeave"
             >
@@ -88,108 +86,108 @@
                   :ref="(el) => registerEl(el, ci, String(mKey))"
               ></div>
 
-              <!-- 悬停时显示的详细信息 -->
+              <!-- Details on hover -->
               <div v-if="activeChartId === chartId(ci, String(mKey))" class="chart-details">
                 <div class="details-content">
-                  <h4>详细分析</h4>
+                  <h4>Details</h4>
                   <p>{{ getChartDescription(mKey) }}</p>
                   <div class="stats-info">
                     <div class="stat-item">
-                      <span class="stat-label">数据总量:</span>
-                      <span class="stat-value">{{ getFilteredCount() }} 条记录</span>
+                      <span class="stat-label">Total records:</span>
+                      <span class="stat-value">{{ getFilteredCount() }}</span>
                     </div>
                     <div class="stat-item">
-                      <span class="stat-label">当前视图:</span>
-                      <span class="stat-value">{{ getChartType(chartId(ci, String(mKey))) === 'pie' ? '饼状图' : '柱状图' }}</span>
+                      <span class="stat-label">Current view:</span>
+                      <span class="stat-value">{{ getChartType(chartId(ci, String(mKey))) === 'pie' ? 'Pie Chart' : 'Bar Chart' }}</span>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
+            </div> <!-- /chart-card -->
+          </div> <!-- /cards-grid -->
+        </div> <!-- /group-section -->
       </div>
     </div>
   </div>
 </template>
 
 <script>
-// Manually manage echarts instances
+// Manually manage ECharts instances
 import * as echarts from 'echarts'
 import { ElMessage } from 'element-plus'
-import { getAllHealthRecords } from '@/api/HealthRecordShow.js' // If error, change to '@/api/HealthRecordShow'
+import { getAllHealthRecords } from '@/api/HealthRecordShow.js'
 import Header from '@/components/Header.vue'
 
 export default {
   name: 'VisualAllChartsWithGlobalFilter',
-
   components: { Header },
 
   data() {
     return {
-      activeChartId: null, // 当前激活的图表ID
-      hoverTimer: null, // 悬停计时器
-      hoverDelay: 900, // 悬停延迟时间（毫秒）
-      leaveDelay: 300,  // 离开延迟时间
+      activeChartId: null,   // Currently active chart ID
+      hoverTimer: null,      // Hover timer
+      hoverDelay: 900,       // Hover delay in ms
+      leaveDelay: 300,       // Mouse-leave delay
       loading: false,
       raw: [],
-      // 板块可见性控制
+
+      // Section visibility controls
       categoryVisibility: {
-        'demographic': true,
-        'lipid': true,
-        'renal_vitals': true
+        demographic: true,
+        lipid: true,
+        renal_vitals: true
       },
 
-      // 单个图表可见性控制 { [chartId]: boolean }
+      // Per-chart visibility controls { [chartId]: boolean }
       chartVisibility: {},
 
-      // 控制面板展开状态
+      // Control panel expand state
       controlPanelExpanded: false,
 
       // Global filters
-      globalSex: '全部 (All)',
-      globalAgeBucket: '全部 (All)',
+      globalSex: 'All',
+      globalAgeBucket: 'All',
 
       // Metric definitions (numeric with buckets)
       metrics: [
-        { key: 'totalCholesterol', label: '总胆固醇 (Total Cholesterol)', kind: 'number', buckets: [3,4,5,6,7,8] },
-        { key: 'triglyceride',     label: '甘油三酯 (Triglyceride)', kind: 'number', buckets: [0.8,1.7,2.3,5.6] },
-        { key: 'hdlC',             label: '高密度脂蛋白 (HDL-C)', kind: 'number', buckets: [0.8,1.0,1.3,1.6] },
-        { key: 'ldlC',             label: '低密度脂蛋白 (LDL-C)', kind: 'number', buckets: [1.8,2.6,3.4,4.1] },
-        { key: 'vldlC',            label: '极低密度脂蛋白 (VLDL-C)', kind: 'number', buckets: [0.2,0.4,0.8] },
-        { key: 'pulse',            label: '脉搏 (Pulse)', kind: 'number', buckets: [60,80,100,120] },
-        { key: 'diastolicBp',      label: '舒张压 (Diastolic BP)', kind: 'number', buckets: [60,80,90,100] },
-        { key: 'bun',              label: '尿素氮 (BUN)', kind: 'number', buckets: [3,7,9] },
-        { key: 'uricAcid',         label: '尿酸 (Uric Acid)', kind: 'number', buckets: [240,360,420,480] },
-        { key: 'creatinine',       label: '肌酐 (Creatinine)', kind: 'number', buckets: [60,97,133,186] },
-        { key: 'age',              label: '年龄 (Age)', kind: 'number', buckets: [18,30,40,50,60,70,80] },
-        { key: 'sex',              label: '性别 (Sex)', kind: 'enum' },
-        { key: 'hypertensionHistory', label: '高血压史 (Hypertension History)', kind: 'bool' },
+        { key: 'totalCholesterol', label: 'Total Cholesterol', kind: 'number', buckets: [3,4,5,6,7,8] },
+        { key: 'triglyceride',     label: 'Triglycerides', kind: 'number', buckets: [0.8,1.7,2.3,5.6] },
+        { key: 'hdlC',             label: 'HDL-C', kind: 'number', buckets: [0.8,1.0,1.3,1.6] },
+        { key: 'ldlC',             label: 'LDL-C', kind: 'number', buckets: [1.8,2.6,3.4,4.1] },
+        { key: 'vldlC',            label: 'VLDL-C', kind: 'number', buckets: [0.2,0.4,0.8] },
+        { key: 'pulse',            label: 'Pulse (bpm)', kind: 'number', buckets: [60,80,100,120] },
+        { key: 'diastolicBp',      label: 'Diastolic BP (mmHg)', kind: 'number', buckets: [60,80,90,100] },
+        { key: 'bun',              label: 'Blood Urea Nitrogen (BUN)', kind: 'number', buckets: [3,7,9] },
+        { key: 'uricAcid',         label: 'Uric Acid (µmol/L)', kind: 'number', buckets: [240,360,420,480] },
+        { key: 'creatinine',       label: 'Creatinine (µmol/L)', kind: 'number', buckets: [60,97,133,186] },
+        { key: 'age',              label: 'Age', kind: 'number', buckets: [18,30,40,50,60,70,80] },
+        { key: 'sex',              label: 'Sex', kind: 'enum' },
+        { key: 'hypertensionHistory', label: 'Hypertension History', kind: 'bool' },
       ],
 
-      // Three major categories: Display all at once
+      // Three major categories
       categoriesList: [
-        { key: 'demographic',  label: '基本信息 (Demographics)',         metrics: ['sex', 'hypertensionHistory', 'age'] },
-        { key: 'lipid',        label: '血脂相关 (Lipid Related)',         metrics: ['totalCholesterol','triglyceride','hdlC','ldlC','vldlC'] },
-        { key: 'renal_vitals', label: '生命体征 / 肾功能 (Vitals / Renal Function)', metrics: ['pulse','diastolicBp','bun','uricAcid','creatinine'] },
+        { key: 'demographic',  label: 'Demographics',               metrics: ['sex', 'hypertensionHistory', 'age'] },
+        { key: 'lipid',        label: 'Lipid Profile',              metrics: ['totalCholesterol','triglyceride','hdlC','ldlC','vldlC'] },
+        { key: 'renal_vitals', label: 'Vitals / Renal Function',    metrics: ['pulse','diastolicBp','bun','uricAcid','creatinine'] },
       ],
 
-      // DOM and ECharts instance cache
+      // DOM & ECharts caches
       elMap: Object.create(null),    // { id: HTMLDivElement }
       chartMap: Object.create(null), // { id: EChartsInstance }
 
-      // Each chart's type: pie/bar
-      chartTypeMap: Object.create(null), // { id: 'pie' | 'bar' }
+      // Per-chart type: 'pie' | 'bar'
+      chartTypeMap: Object.create(null),
 
       // Dimension options
-      sexOptions: ['全部 (All)', '男 (Male)', '女 (Female)', '其他 (Other)', '未知 (Unknown)'],
+      sexOptions: ['All', 'Male', 'Female', 'Other', 'Unknown'],
     }
   },
 
   computed: {
     ageBucketOptions() {
       const labels = this.bucketLabels([18,30,40,50,60,70,80])
-      return ['全部 (All)', ...labels]
+      return ['All', ...labels]
     }
   },
 
@@ -205,16 +203,14 @@ export default {
   },
 
   methods: {
-    // 处理图表悬停
+    // Handle chart hover
     handleChartHover(catIndex, metricKey) {
       const chartId = this.chartId(catIndex, metricKey)
 
-      // 清除之前的计时器
-      if (this.hoverTimer) {
-        clearTimeout(this.hoverTimer)
-      }
+      // Clear previous timer
+      if (this.hoverTimer) clearTimeout(this.hoverTimer)
 
-      // 设置新的计时器，实现平滑过渡
+      // Set new timer for smooth transition
       this.hoverTimer = setTimeout(() => {
         this.activeChartId = chartId
         this.$nextTick(() => {
@@ -225,31 +221,27 @@ export default {
       }, 200)
     },
 
-    // 处理鼠标离开
+    // Handle mouse leave
     handleChartLeave() {
-      if (this.hoverTimer) {
-        clearTimeout(this.hoverTimer)
-      }
+      if (this.hoverTimer) clearTimeout(this.hoverTimer)
       this.hoverTimer = setTimeout(() => {
         this.activeChartId = null
       }, 300)
     },
 
-    // 渲染柱状图预览
+    // Render the small bar preview (if you have a preview ref)
     renderBarPreview(chartId) {
       if (!this.$refs.previewChart) return
 
-      // 销毁之前的预览图表
+      // Dispose old preview chart
       const existingChart = echarts.getInstanceByDom(this.$refs.previewChart)
-      if (existingChart) {
-        existingChart.dispose()
-      }
+      if (existingChart) existingChart.dispose()
 
       const chart = echarts.init(this.$refs.previewChart)
       const [ci, metricKey] = chartId.replace(/^c/, '').split('-')
       const filtered = this.applyGlobalFilters(this.raw)
       const titleText = this.metricLabel(metricKey)
-      const items = filtered.length ? this.makeItems(metricKey, filtered) : [{ name: '暂无数据 (No data)', value: 1 }]
+      const items = filtered.length ? this.makeItems(metricKey, filtered) : [{ name: 'No data', value: 1 }]
 
       const categories = items.map(d => d.name)
       const values = items.map(d => d.value)
@@ -270,7 +262,7 @@ export default {
         },
         yAxis: {
           type: 'value',
-          name: '数量',
+          name: 'Count',
           axisLabel: { color: '#374151', fontSize: 12 },
           splitLine: { lineStyle: { color: '#F3F4F6' } },
           axisLine: { lineStyle: { color: '#E5E7EB' } }
@@ -292,130 +284,128 @@ export default {
       })
     },
 
-    // 切换到柱状图
+    // Switch to bar (helper)
     switchToBar(chartId) {
       this.toggleChartTypeFor(chartId)
       this.activeChartId = null
     },
-// 计算正常值比例
+
+    // Compute normal-range ratio for a metric
     calculateNormalRatio(metricKey, filteredData) {
-      if (filteredData.length === 0) return 0;
+      if (filteredData.length === 0) return 0
+      const m = this.metricDef(metricKey)
+      if (!m) return 0
 
-      const m = this.metricDef(metricKey);
-      if (!m) return 0;
-
-      let normalCount = 0;
+      let normalCount = 0
 
       switch (metricKey) {
         case 'totalCholesterol':
-          normalCount = filteredData.filter(r => r[m.key] < 5.2).length;
-          break;
+          normalCount = filteredData.filter(r => r[m.key] < 5.2).length
+          break
         case 'triglyceride':
-          normalCount = filteredData.filter(r => r[m.key] < 1.7).length;
-          break;
+          normalCount = filteredData.filter(r => r[m.key] < 1.7).length
+          break
         case 'ldlC':
-          normalCount = filteredData.filter(r => r[m.key] < 2.6).length;
-          break;
+          normalCount = filteredData.filter(r => r[m.key] < 2.6).length
+          break
         case 'hdlC':
-          // 高密度脂蛋白：男性>1.0，女性>1.3
+          // HDL-C: Male > 1.0, Female > 1.3
           normalCount = filteredData.filter(r => {
-            const sex = r.sex;
-            const value = r[m.key];
-            if (sex === '男 (Male)' || sex === '男') return value > 1.0;
-            if (sex === '女 (Female)' || sex === '女') return value > 1.3;
-            return value > 1.0; // 默认使用男性标准
-          }).length;
-          break;
+            const sex = r.sex
+            const value = r[m.key]
+            if (sex === 'Male' || sex === '男') return value > 1.0
+            if (sex === 'Female' || sex === '女') return value > 1.3
+            return value > 1.0 // default to male standard
+          }).length
+          break
         case 'pulse':
-          normalCount = filteredData.filter(r => r[m.key] >= 60 && r[m.key] <= 100).length;
-          break;
+          normalCount = filteredData.filter(r => r[m.key] >= 60 && r[m.key] <= 100).length
+          break
         case 'diastolicBp':
-          normalCount = filteredData.filter(r => r[m.key] < 80).length;
-          break;
+          normalCount = filteredData.filter(r => r[m.key] < 80).length
+          break
         case 'bun':
-          normalCount = filteredData.filter(r => r[m.key] >= 3 && r[m.key] <= 7).length;
-          break;
+          normalCount = filteredData.filter(r => r[m.key] >= 3 && r[m.key] <= 7).length
+          break
         case 'uricAcid':
-          // 尿酸：男性<420，女性<360
+          // Uric acid: Male < 420, Female < 360
           normalCount = filteredData.filter(r => {
-            const sex = r.sex;
-            const value = r[m.key];
-            if (sex === '男 (Male)' || sex === '男') return value < 420;
-            if (sex === '女 (Female)' || sex === '女') return value < 360;
-            return value < 420; // 默认使用男性标准
-          }).length;
-          break;
+            const sex = r.sex
+            const value = r[m.key]
+            if (sex === 'Male' || sex === '男') return value < 420
+            if (sex === 'Female' || sex === '女') return value < 360
+            return value < 420 // default to male standard
+          }).length
+          break
         case 'creatinine':
-          // 肌酐：男性<97，女性<133
+          // Creatinine: Male < 97, Female < 133 (µmol/L)
           normalCount = filteredData.filter(r => {
-            const sex = r.sex;
-            const value = r[m.key];
-            if (sex === '男 (Male)' || sex === '男') return value < 97;
-            if (sex === '女 (Female)' || sex === '女') return value < 133;
-            return value < 97; // 默认使用男性标准
-          }).length;
-          break;
+            const sex = r.sex
+            const value = r[m.key]
+            if (sex === 'Male' || sex === '男') return value < 97
+            if (sex === 'Female' || sex === '女') return value < 133
+            return value < 97 // default to male standard
+          }).length
+          break
         case 'hypertensionHistory':
-          normalCount = filteredData.filter(r => !r[m.key]).length; // 无高血压史为正常
-          break;
+          normalCount = filteredData.filter(r => !r[m.key]).length // no HTN history = normal
+          break
         case 'age':
-          // 年龄：18-80岁视为正常
-          normalCount = filteredData.filter(r => r[m.key] >= 18 && r[m.key] <= 80).length;
-          break;
+          // Age: 18–80 considered "normal" range for display
+          normalCount = filteredData.filter(r => r[m.key] >= 18 && r[m.key] <= 80).length
+          break
         case 'sex':
         case 'vldlC':
-          // 对于分类数据或没有明确正常范围的数据，返回50%作为默认值
-          return 0.5;
+          // For categorical or unclear ranges, return 50% as a neutral default
+          return 0.5
         default:
-          return 0.5;
+          return 0.5
       }
 
-      return normalCount / filteredData.length;
+      return normalCount / filteredData.length
     },
-    // 获取图表描述和计算正常值比例
+
+    // Build an English chart description with normal share
     getChartDescription(metricKey) {
-      const filteredData = this.applyGlobalFilters(this.raw);
-      const totalCount = filteredData.length;
+      const filteredData = this.applyGlobalFilters(this.raw)
+      const totalCount = filteredData.length
+      if (totalCount === 0) return 'No data available for analysis.'
 
-      if (totalCount === 0) {
-        return '暂无数据可供分析。';
-      }
-
-      // 计算正常值比例
-      const normalRatio = this.calculateNormalRatio(metricKey, filteredData);
-      const normalPercentage = (normalRatio * 100).toFixed(1);
+      const normalRatio = this.calculateNormalRatio(metricKey, filteredData)
+      const normalPercentage = (normalRatio * 100).toFixed(1)
 
       const descriptions = {
-        'totalCholesterol': `总胆固醇是血液中所有脂蛋白所含胆固醇的总和。在当前筛选条件下，正常值（<5.2mmol/L）占比 ${normalPercentage}%。`,
-        'triglyceride': `甘油三酯是血液中的脂肪成分。在当前筛选条件下，理想水平（<1.7mmol/L）占比 ${normalPercentage}%。`,
-        'hdlC': `高密度脂蛋白被称为"好胆固醇"，有助于清除血管中的胆固醇。在当前筛选条件下，正常水平占比 ${normalPercentage}%。`,
-        'ldlC': `低密度脂蛋白被称为"坏胆固醇"，是动脉粥样硬化的主要风险因素。在当前筛选条件下，正常水平（<2.6mmol/L）占比 ${normalPercentage}%。`,
-        'vldlC': `极低密度脂蛋白主要运输内源性甘油三酯。在当前筛选条件下，正常水平占比 ${normalPercentage}%。`,
-        'pulse': `脉搏反映心脏跳动频率。在当前筛选条件下，正常静息心率（60-100次/分钟）占比 ${normalPercentage}%。`,
-        'diastolicBp': `舒张压是心脏舒张时动脉血管的最低压力。在当前筛选条件下，正常水平（<80mmHg）占比 ${normalPercentage}%。`,
-        'bun': `尿素氮是蛋白质代谢的产物，反映肾功能状况。在当前筛选条件下，正常水平占比 ${normalPercentage}%。`,
-        'uricAcid': `尿酸是嘌呤代谢的终产物。在当前筛选条件下，正常水平占比 ${normalPercentage}%。`,
-        'creatinine': `肌酐是肌肉代谢产物，是评估肾功能的重要指标。在当前筛选条件下，正常水平占比 ${normalPercentage}%。`,
-        'age': `年龄是健康评估的基础因素。在当前筛选条件下，数据分布正常占比 ${normalPercentage}%。`,
-        'sex': `性别差异影响疾病风险和生理指标正常范围。当前筛选条件下的性别分布如上所示。`,
-        'hypertensionHistory': `高血压史是心血管疾病的重要风险因素。在当前筛选条件下，无高血压史占比 ${normalPercentage}%。`
+        totalCholesterol: `Total cholesterol is the sum of cholesterol carried by all lipoproteins. Under current filters, normal (< 5.2 mmol/L) share: ${normalPercentage}%.`,
+        triglyceride: `Triglycerides are a blood lipid. Under current filters, desirable level (< 1.7 mmol/L) share: ${normalPercentage}%.`,
+        hdlC: `HDL-C is the "good" cholesterol. Under current filters, normal share: ${normalPercentage}%.`,
+        ldlC: `LDL-C is the "bad" cholesterol and a key risk factor for atherosclerosis. Under current filters, normal (< 2.6 mmol/L) share: ${normalPercentage}%.`,
+        vldlC: `VLDL-C mainly transports endogenous triglycerides. Under current filters, normal share: ${normalPercentage}%.`,
+        pulse: `Pulse reflects resting heart rate. Under current filters, normal (60–100 bpm) share: ${normalPercentage}%.`,
+        diastolicBp: `Diastolic blood pressure is the lowest arterial pressure during relaxation. Under current filters, normal (< 80 mmHg) share: ${normalPercentage}%.`,
+        bun: `Blood urea nitrogen reflects renal function. Under current filters, normal share: ${normalPercentage}%.`,
+        uricAcid: `Uric acid is the end-product of purine metabolism. Under current filters, normal share: ${normalPercentage}%.`,
+        creatinine: `Creatinine is a muscle metabolism product and an important renal marker. Under current filters, normal share: ${normalPercentage}%.`,
+        age: `Age is a foundational factor for health assessment. Under current filters, values within 18–80 share: ${normalPercentage}%.`,
+        sex: `Sex differences affect disease risk and reference ranges. See distribution above under the current filters.`,
+        hypertensionHistory: `Hypertension history is a major cardiovascular risk factor. Under current filters, "No hypertension history" share: ${normalPercentage}%.`
       }
 
-      return descriptions[metricKey] || `该指标反映了相关的健康信息。在当前筛选条件下，正常值占比 ${normalPercentage}%。`;
+      return descriptions[metricKey] || `This metric reflects a related health aspect. Under current filters, normal share: ${normalPercentage}%.`
     },
 
-    // 获取过滤后的数据数量
+    // Filtered record count
     getFilteredCount() {
       return this.applyGlobalFilters(this.raw).length
     },
 
-    // 获取激活图表的标签
+    // Active chart label
     getActiveChartLabel() {
       if (!this.activeChartId) return ''
       const [ci, metricKey] = this.activeChartId.replace(/^c/, '').split('-')
       return this.metricLabel(metricKey)
     },
-    // --- Common ---
+
+    // --- Common helpers ---
     chartId(catIndex, metricKey) {
       return `c${catIndex}-${metricKey}`
     },
@@ -424,7 +414,7 @@ export default {
       const id = this.chartId(catIndex, metricKey)
       if (el) {
         this.elMap[id] = el
-        // Initialize chart type (default pie chart)
+        // Default chart type: pie
         if (!this.chartTypeMap[id]) this.chartTypeMap[id] = 'pie'
       } else {
         this.disposeOne(id)
@@ -439,7 +429,7 @@ export default {
         const data = Array.isArray(res?.data) ? res.data : (res?.data?.data ?? [])
         this.raw = data || []
       } catch (e) {
-        ElMessage.error(e?.message || 'Load failed（加载失败）')
+        ElMessage.error(e?.message || 'Load failed')
         this.raw = []
       } finally {
         this.loading = false
@@ -451,18 +441,18 @@ export default {
       this.$nextTick(() => this.renderAll())
     },
 
-    // --- Chart type (independent for each chart) ---
+    // --- Chart type per chart ---
     getChartType(id) {
       return this.chartTypeMap[id] || 'pie'
     },
     toggleChartTypeFor(id) {
       this.chartTypeMap[id] = this.getChartType(id) === 'pie' ? 'bar' : 'pie'
       // Re-render only this chart
-      const [ci, metricKey] = id.replace(/^c/, '').split('-') // "c{ci}-{metric}"
+      const [ci, metricKey] = id.replace(/^c/, '').split('-')
       this.renderOne(Number(ci), metricKey)
     },
 
-    // --- Utility ---
+    // --- Utilities ---
     metricDef(key) {
       return this.metrics.find(m => m.key === key)
     },
@@ -471,7 +461,7 @@ export default {
       return m?.label || key
     },
     bucketize(val, cuts) {
-      if (val == null || Number.isNaN(val)) return '未知 (Unknown)'
+      if (val == null || Number.isNaN(val)) return 'Unknown'
       for (let i = 0; i < cuts.length; i++) {
         if (val < cuts[i]) {
           const left = i === 0 ? 0 : String(cuts[i-1])
@@ -491,54 +481,40 @@ export default {
       labels.push(`${cuts[cuts.length - 1]}+`)
       return labels
     },
-    // 确保年龄区间计算正确
+    // Robust age bucketing
     ageBucket(n) {
-      // 更严格的空值检查
-      if (n == null || n === '' || n === undefined) return '未知 (Unknown)'
-
+      if (n == null || n === '' || n === undefined) return 'Unknown'
       const age = Number(n)
-      // 更全面的有效性检查
-      if (isNaN(age) || !isFinite(age) || age < 0) return '未知 (Unknown)'
-
+      if (isNaN(age) || !isFinite(age) || age < 0) return 'Unknown'
       const cuts = [18, 30, 40, 50, 60, 70, 80]
       return this.bucketize(age, cuts)
     },
 
-// 添加性别标准化方法
+    // Normalize sex strings (accepts English/Chinese variants)
     normalizeSex(sex) {
-      if (!sex) return '未知 (Unknown)'
-
+      if (!sex) return 'Unknown'
       const sexStr = String(sex).toLowerCase().trim()
-
-      if (sexStr.includes('男') || sexStr.includes('male')) return '男 (Male)'
-      if (sexStr.includes('女') || sexStr.includes('female')) return '女 (Female)'
-      if (sexStr.includes('其他') || sexStr.includes('other')) return '其他 (Other)'
-
-      return '未知 (Unknown)'
+      if (sexStr.includes('男') || sexStr.includes('male')) return 'Male'
+      if (sexStr.includes('女') || sexStr.includes('female')) return 'Female'
+      if (sexStr.includes('其他') || sexStr.includes('other')) return 'Other'
+      return 'Unknown'
     },
+
     // Apply global filters
     applyGlobalFilters(records) {
       let arr = records || []
 
-      // 性别筛选 - 添加更灵活的匹配
-      if (this.globalSex && this.globalSex !== '全部 (All)') {
-        arr = arr.filter(r => {
-          const recordSex = r?.sex ?? '未知 (Unknown)'
-          // 支持多种格式的性别匹配
-          return this.normalizeSex(recordSex) === this.normalizeSex(this.globalSex)
-        })
+      // Sex filter
+      if (this.globalSex && this.globalSex !== 'All') {
+        arr = arr.filter(r => this.normalizeSex(r?.sex ?? 'Unknown') === this.normalizeSex(this.globalSex))
       }
 
-      // 年龄区间筛选 - 修正逻辑
-      if (this.globalAgeBucket && this.globalAgeBucket !== '全部 (All)') {
-        arr = arr.filter(r => {
-          const age = r?.age ?? null
-          const recordAgeBucket = this.ageBucket(age)
-          return recordAgeBucket === this.globalAgeBucket
-        })
+      // Age bucket filter
+      if (this.globalAgeBucket && this.globalAgeBucket !== 'All') {
+        arr = arr.filter(r => this.ageBucket(r?.age ?? null) === this.globalAgeBucket)
       }
 
-      console.log('筛选后数据量:', arr.length, '筛选条件:', {
+      console.log('Filtered data size:', arr.length, 'Filters:', {
         sex: this.globalSex,
         ageBucket: this.globalAgeBucket
       })
@@ -546,23 +522,23 @@ export default {
       return arr
     },
 
-    // Uniform statistics: return [{name, value}]
+    // Build [{ name, value }] for a metric
     makeItems(metricKey, filtered) {
       const m = this.metricDef(metricKey)
-      if (!m) return [{ name: '暂无数据 (No data)', value: 1 }]
+      if (!m) return [{ name: 'No data', value: 1 }]
       const counter = new Map()
 
       for (const r of filtered) {
         const v = r[m.key]
-        let name = '未知 (Unknown)'
+        let name = 'Unknown'
         if (m.kind === 'number' && m.buckets) {
-          name = typeof v === 'number' ? this.bucketize(v, m.buckets) : '未知 (Unknown)'
+          name = typeof v === 'number' ? this.bucketize(v, m.buckets) : 'Unknown'
         } else if (m.kind === 'enum') {
-          name = String(v ?? '未知 (Unknown)')
+          name = String(v ?? 'Unknown')
         } else if (m.kind === 'bool') {
-          name = v ? '是 (Yes)' : '否 (No)'
+          name = v ? 'Yes' : 'No'
         } else {
-          name = String(v ?? '未知 (Unknown)')
+          name = String(v ?? 'Unknown')
         }
         counter.set(name, (counter.get(name) || 0) + 1)
       }
@@ -576,14 +552,14 @@ export default {
       const el = this.elMap[id]
       if (!el) return
 
-      // Clear old instances
+      // Dispose old instance then init
       this.disposeOne(id)
       const chart = echarts.init(el)
       this.chartMap[id] = chart
 
       const filtered = this.applyGlobalFilters(this.raw)
       const titleText = this.metricLabel(metricKey)
-      const items = filtered.length ? this.makeItems(metricKey, filtered) : [{ name: '暂无数据 (No data)', value: 1 }]
+      const items = filtered.length ? this.makeItems(metricKey, filtered) : [{ name: 'No data', value: 1 }]
       const chartType = this.getChartType(id)
 
       const legendCommon = {
@@ -593,13 +569,13 @@ export default {
         orient: 'vertical'
       }
 
-      // 特殊处理基本信息组和血脂相关组的饼图大小
-      const isDemographics = catIndex === 0; // 第一个分组是基本信息
-      const isLipidRelated = catIndex === 1; // 第二个分组是血脂相关
-      const isSmallChart = isDemographics || isLipidRelated;
+      // Special sizing for demographics and lipid groups
+      const isDemographics = catIndex === 0
+      const isLipidRelated = catIndex === 1
+      const isSmallChart = isDemographics || isLipidRelated
 
-      const pieRadius = isSmallChart ? ['45%', '65%'] : ['55%', '78%'];
-      const pieCenter = isSmallChart ? ['50%', '52%'] : ['50%', '56%'];
+      const pieRadius = isSmallChart ? ['45%', '65%'] : ['55%', '78%']
+      const pieCenter = isSmallChart ? ['50%', '52%'] : ['50%', '56%']
 
       if (chartType === 'pie') {
         chart.setOption({
@@ -614,7 +590,6 @@ export default {
             ...legendCommon,
             data: items.map(d => d.name),
             textStyle: { color: '#374151' },
-            // 小尺寸图表图例位置调整
             ...(isSmallChart && { right: 5, bottom: 5 })
           },
           series: [{
@@ -626,7 +601,6 @@ export default {
           }]
         })
       } else {
-        // 柱状图配置保持不变
         const categories = items.map(d => d.name)
         const values = items.map(d => d.value)
         chart.setOption({
@@ -640,7 +614,7 @@ export default {
           legend: { ...legendCommon, data: [titleText], textStyle: { color: '#374151' } },
           grid: { left: 50, right: 120, top: 60, bottom: 60, containLabel: true },
           xAxis: { type: 'category', data: categories, axisLabel: { interval: 0, rotate: 20, color: '#374151' }, axisLine: { lineStyle: { color: '#E5E7EB' } } },
-          yAxis: { type: 'value', name: '数量 (Count)', axisLabel: { color: '#374151' }, splitLine: { lineStyle: { color: '#F3F4F6' } }, axisLine: { lineStyle: { color: '#E5E7EB' } } },
+          yAxis: { type: 'value', name: 'Count', axisLabel: { color: '#374151' }, splitLine: { lineStyle: { color: '#F3F4F6' } }, axisLine: { lineStyle: { color: '#E5E7EB' } } },
           series: [{
             name: titleText,
             type: 'bar',
@@ -671,11 +645,11 @@ export default {
       Object.keys(this.chartMap).forEach(id => this.disposeOne(id))
     },
 
-    // 获取正常值比例（百分比形式）
+    // Normal ratio (as percentage string)
     getNormalRatio(metricKey) {
-      const filteredData = this.applyGlobalFilters(this.raw);
-      const ratio = this.calculateNormalRatio(metricKey, filteredData);
-      return (ratio * 100).toFixed(1);
+      const filteredData = this.applyGlobalFilters(this.raw)
+      const ratio = this.calculateNormalRatio(metricKey, filteredData)
+      return (ratio * 100).toFixed(1)
     },
 
     handleResize() {
@@ -1027,55 +1001,48 @@ export default {
     width: 100%;
   }
 }
-/* 特殊处理基本信息组的卡片布局 */
+
+/* Special layout for the first group (Demographics) */
 .group-section:first-child .cards-grid {
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
-
 .group-section:first-child .chart-card {
   min-height: 320px;
 }
 
-
-/* 特殊处理血脂相关组的卡片布局 - 三个一行 */
+/* Special layout for the second group (Lipid Profile) — 3 per row */
 .group-section:nth-child(2) .cards-grid {
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
-
 .group-section:nth-child(2) .chart-card {
   min-height: 320px;
 }
 
-/* 图表卡片悬停效果 */
+/* Hover effects for chart cards */
 .chart-card {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
-
 .chart-card.active {
   transform: scale(1.05);
   z-index: 10;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
   border-color: #3b82f6;
 }
-
 .chart-card.inactive {
   transform: scale(0.9);
   opacity: 0.6;
   filter: blur(1px);
 }
 
-
-
-/* 响应式调整 */
+/* Responsive tweaks */
 @media (max-width: 1200px) {
   .group-section:first-child .cards-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
-
 @media (max-width: 768px) {
   .group-section:first-child .cards-grid {
     grid-template-columns: 1fr;

@@ -4,7 +4,7 @@
       <img src="@/assets/logo_blue.png" alt="logo" class="logo" />
       <h2 class="system-title">Health Big Data Application</h2>
 
-      <!-- ✅ 关键：router 模式 + 以路由 path 作为 index -->
+      <!-- ✅ Key: router mode + use the route path as the index -->
       <el-menu
           :default-active="$route.path"
           router
@@ -12,15 +12,15 @@
           class="nav-menu"
           :ellipsis="false"
       >
-        <!-- 首页 -->
+        <!-- Home -->
         <el-menu-item
-            v-if= true
+            v-if="true"
             index="/HealthRecordShow"
         >
           Home
         </el-menu-item>
 
-        <!-- Visualization 子菜单 -->
+        <!-- Visualization submenu -->
         <el-sub-menu v-if="canVisualization" index="__vis__">
           <template #title>Visualization</template>
           <el-menu-item
@@ -37,7 +37,7 @@
           </el-menu-item>
         </el-sub-menu>
 
-        <!-- 权限管理 -->
+        <!-- Permission Management -->
         <el-menu-item
             v-if="permissions.permissionManagement"
             index="/permissionManagement"
@@ -45,7 +45,7 @@
           Permission Management
         </el-menu-item>
 
-        <!-- 审计日志（按你目前用 optionEdit 控制） -->
+        <!-- Audit Logs (currently controlled by optionEdit) -->
         <el-menu-item
             v-if="permissions.accessLogPage"
             index="/auditLogs"
@@ -55,26 +55,12 @@
       </el-menu>
     </div>
 
+    <!-- ✅ Top-right: only keep the Logout button -->
     <div class="header-right">
-      <el-dropdown trigger="click" class="user-dropdown">
-        <span class="el-dropdown-link">
-          <el-avatar :size="32" :src="avatarUrl" class="user-avatar" />
-          <span class="username">{{ username }}</span>
-          <el-icon class="dropdown-icon"><ArrowDown /></el-icon>
-        </span>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item>
-              <el-icon><User /></el-icon>
-              个人中心
-            </el-dropdown-item>
-            <el-dropdown-item divided @click="handleLogout">
-              <el-icon><SwitchButton /></el-icon>
-              退出登录
-            </el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
+      <el-button type="danger" plain @click="handleLogout">
+        <el-icon><SwitchButton /></el-icon>
+        Logout
+      </el-button>
     </div>
   </el-header>
 </template>
@@ -82,13 +68,11 @@
 <script setup>
 import { ref, onMounted, watch, toRaw, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { User, SwitchButton, ArrowDown } from '@element-plus/icons-vue'
+import { SwitchButton } from '@element-plus/icons-vue'
 import { getPermissionByUserId } from '@/api/Permission.js'
 import { getUserId } from '@/api/User.js'
 
 const router = useRouter()
-const username = ref('管理员')
-const avatarUrl = ref('https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png')
 
 const permissions = ref({
   accessLogPage: false,
@@ -112,7 +96,7 @@ const printPerms = () => {
 
 onMounted(async () => {
   try {
-    // 兼容：getUserId 可能直接返回字符串或 { data: "1" }
+    // Compatibility: getUserId may return a plain string or { data: "1" }
     const resp1 = await getUserId()
     const uidStr = (typeof resp1 === 'string') ? resp1 : (resp1?.data ?? resp1)
     const userId = Number(uidStr)
@@ -121,7 +105,7 @@ onMounted(async () => {
       return
     }
 
-    // 兼容：权限可能直接对象或 { data: vo }
+    // Compatibility: permissions may be the object itself or { data: vo }
     const respPerm = await getPermissionByUserId(userId)
     const vo = (respPerm && respPerm.data !== undefined) ? respPerm.data : respPerm
 
@@ -181,6 +165,7 @@ const handleLogout = () => {
 
 .nav-menu { border-bottom: none; }
 
+/* Remove bottom border highlight */
 :deep(.nav-menu .el-sub-menu__title),
 :deep(.nav-menu .el-menu-item) {
   border-bottom: none !important;
@@ -189,20 +174,6 @@ const handleLogout = () => {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 12px;
 }
-
-.user-dropdown { cursor: pointer; }
-
-.el-dropdown-link {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.user-avatar { background-color: #409EFF; }
-
-.username { font-weight: 500; color: #606266; }
-
-.dropdown-icon { color: #909399; }
 </style>

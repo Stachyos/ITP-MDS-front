@@ -4,58 +4,58 @@
 
     <div class="main-content">
       <div class="content-header">
-        <h2 class="page-title">操作日志（Audit Logs）</h2>
+        <h2 class="page-title">Audit Logs</h2>
       </div>
 
       <div class="table-container">
-        <!-- 顶部操作栏 -->
+        <!-- Toolbar -->
         <div class="toolbar">
-          <div class="title">系统操作日志</div>
+          <div class="title">System Audit Logs</div>
           <div class="ops">
             <el-input
                 v-model="keyword"
-                placeholder="筛选关键词（按操作/账号）"
+                placeholder="Filter keyword (action/account)"
                 clearable
                 style="width: 240px"
             />
-            <el-button @click="refreshAll" :loading="loading">刷新</el-button>
+            <el-button @click="refreshAll" :loading="loading">Refresh</el-button>
           </div>
         </div>
 
-        <!-- 表格（前端分页） -->
+        <!-- Table (client-side pagination) -->
         <el-table
             v-loading="loading"
             :data="pagedList"
             border
             style="width: 100%"
             highlight-current-row
-            empty-text="暂无日志"
+            empty-text="No logs"
         >
           <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column prop="userAccount" label="账号" min-width="140" />
-          <el-table-column prop="action" label="操作" min-width="160" />
+          <el-table-column prop="userAccount" label="Account" min-width="140" />
+          <el-table-column prop="action" label="Action" min-width="160" />
           <el-table-column
               prop="detail"
-              label="详情"
+              label="Details"
               min-width="240"
               show-overflow-tooltip
           />
-          <el-table-column prop="success" label="结果" width="100">
+          <el-table-column prop="success" label="Result" width="100">
             <template #default="{ row }">
               <el-tag :type="row.success ? 'success' : 'danger'">
-                {{ row.success ? '成功' : '失败' }}
+                {{ row.success ? 'Success' : 'Failed' }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="time" label="时间" width="180" />
-          <el-table-column label="操作" width="120" fixed="right">
+          <el-table-column prop="time" label="Time" width="180" />
+          <el-table-column label="Actions" width="120" fixed="right">
             <template #default="{ row }">
-              <el-button size="small" @click="showDetail(row)">详情</el-button>
+              <el-button size="small" @click="showDetail(row)">Details</el-button>
             </template>
           </el-table-column>
         </el-table>
 
-        <!-- 分页（前端） -->
+        <!-- Pagination (client-side) -->
         <div style="margin-top: 12px; text-align: right;">
           <el-pagination
               background
@@ -71,28 +71,28 @@
       </div>
     </div>
 
-    <!-- 日志详情弹窗 -->
-    <el-dialog v-model="detailVisible" title="日志详情" width="640px">
+    <!-- Log details dialog -->
+    <el-dialog v-model="detailVisible" title="Log Details" width="640px">
       <el-descriptions :column="1" border v-if="currentLog">
         <el-descriptions-item label="ID">{{ currentLog.id }}</el-descriptions-item>
-        <el-descriptions-item label="账号">
+        <el-descriptions-item label="Account">
           {{ currentLog.userAccount }} (ID={{ currentLog.userId }})
         </el-descriptions-item>
-        <el-descriptions-item label="操作">{{ currentLog.action }}</el-descriptions-item>
-        <el-descriptions-item label="详情">{{ currentLog.detail }}</el-descriptions-item>
-        <el-descriptions-item label="结果">
+        <el-descriptions-item label="Action">{{ currentLog.action }}</el-descriptions-item>
+        <el-descriptions-item label="Details">{{ currentLog.detail }}</el-descriptions-item>
+        <el-descriptions-item label="Result">
           <el-tag :type="currentLog.success ? 'success' : 'danger'">
-            {{ currentLog.success ? '成功' : '失败' }}
+            {{ currentLog.success ? 'Success' : 'Failed' }}
           </el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="异常信息">
+        <el-descriptions-item label="Error Message">
           {{ currentLog.errorMsg || '-' }}
         </el-descriptions-item>
-        <el-descriptions-item label="时间">{{ currentLog.time }}</el-descriptions-item>
+        <el-descriptions-item label="Time">{{ currentLog.time }}</el-descriptions-item>
       </el-descriptions>
 
       <template #footer>
-        <el-button @click="detailVisible = false">关 闭</el-button>
+        <el-button @click="detailVisible = false">Close</el-button>
       </template>
     </el-dialog>
   </div>
@@ -102,23 +102,23 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import Header from '@/components/Header.vue'
-import { getAuditLogs } from '@/api/AuditLogApi.js' // 后端分页API（page从0开始）
+import { getAuditLogs } from '@/api/AuditLogApi.js' // Backend pagination API (page starts at 0)
 
 const loading = ref(false)
-const logs = ref([])              // 全量日志（合并后）
+const logs = ref([])              // Full log list (merged)
 const keyword = ref('')
 
-const page = ref(1)               // 前端分页：当前页
-const pageSize = ref(20)          // 前端分页：每页大小
+const page = ref(1)               // Client-side pagination: current page
+const pageSize = ref(20)          // Client-side pagination: page size
 const detailVisible = ref(false)
 const currentLog = ref(null)
 
 const CACHE_KEY = 'audit_logs_cache_v1'
-// 拉取策略
-const FETCH_PAGE_SIZE = 1000      // 每次向后端请求的页大小
-const MAX_ROWS = 20000            // 最大抓取条数上限
+// Fetching strategy
+const FETCH_PAGE_SIZE = 1000      // Page size per backend request
+const MAX_ROWS = 20000            // Upper bound of total rows to fetch
 
-// 统一：前端筛选 + 前端分页
+// Unified: client-side filtering + client-side pagination
 const filteredList = computed(() => {
   const kw = (keyword.value || '').trim().toLowerCase()
   if (!kw) return logs.value
@@ -133,33 +133,33 @@ const pagedList = computed(() => {
   return filteredList.value.slice(start, start + pageSize.value)
 })
 
-// ✅ 分页事件（缺这个会导致点击分页无效）
+// ✅ Pagination handlers (required; otherwise clicking pages won't work)
 const onPageChange = (p) => {
   if (Number.isFinite(p)) page.value = p
 }
 const onPageSizeChange = (s) => {
   if (Number.isFinite(s) && s > 0) {
     pageSize.value = s
-    page.value = 1  // 切换每页条数后回到第一页
+    page.value = 1  // Reset to first page after page size changes
   }
 }
 
-// 搜索变更时回到首页
+// Reset to first page when keyword changes
 watch(keyword, () => { page.value = 1 })
 
-// ✅ 防越界：当总数或 pageSize 改变导致最大页变小，自动把 page 调回有效范围
+// ✅ Bounds safety: when total or pageSize changes and max page shrinks, clamp current page
 watch([filteredTotal, pageSize], ([total, size]) => {
   const maxPage = Math.max(1, Math.ceil((total || 0) / (size || 1)))
   if (page.value > maxPage) page.value = maxPage
 })
 
-// 刷新（重抓）
+// Refresh (re-fetch)
 const refreshAll = async () => {
   await fetchAllLogs(true)
 }
 
 const fetchAllLogs = async (force = false) => {
-  // 1) 会话缓存优先，首屏秒开
+  // 1) Session cache first for fast initial render
   if (!force) {
     const cached = sessionStorage.getItem(CACHE_KEY)
     if (cached) {
@@ -172,7 +172,7 @@ const fetchAllLogs = async (force = false) => {
 
   loading.value = true
   try {
-    // 2) 分段抓取到上限或抓完
+    // 2) Fetch in chunks until limit reached or all data loaded
     const merged = []
     let pageIdx = 0
     let totalElements = Infinity
@@ -193,10 +193,10 @@ const fetchAllLogs = async (force = false) => {
 
     logs.value = merged
     sessionStorage.setItem(CACHE_KEY, JSON.stringify(merged))
-    // 拉完回到第一页，避免当前页越界
+    // After fetching, go back to the first page to avoid out-of-range page index
     page.value = 1
   } catch (err) {
-    ElMessage.error(err?.message || '加载日志失败')
+    ElMessage.error(err?.message || 'Failed to load logs')
   } finally {
     loading.value = false
   }

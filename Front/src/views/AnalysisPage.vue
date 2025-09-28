@@ -5,10 +5,9 @@
     <!-- Top: Title + Global Filters -->
     <div class="header">
       <div class="title">
-        <div class="h1">Deep Analysis（深度分析）</div>
+        <div class="h1">Deep Analysis</div>
         <div class="subtitle">
           Correlation, Chi-square, t-test, Correlation Matrix, Age Trends, Boxplot, Bootstrap CI
-          （相关性、卡方、t检验、相关矩阵、年龄趋势、箱线图、Bootstrap 置信区间）
         </div>
       </div>
 
@@ -17,7 +16,7 @@
             v-model="globalSex"
             size="large"
             class="ctrl"
-            placeholder="Sex（性别）"
+            placeholder="Sex"
             @change="renderAll"
         >
           <el-option v-for="s in sexOptions" :key="s" :label="s" :value="s" />
@@ -27,78 +26,78 @@
             v-model="globalAgeBucket"
             size="large"
             class="ctrl"
-            placeholder="Age Range（年龄区间）"
+            placeholder="Age Range"
             @change="renderAll"
         >
           <el-option v-for="ab in ageBucketOptions" :key="ab" :label="ab" :value="ab" />
         </el-select>
 
-        <el-button :loading="loading" @click="reload">Refresh（刷新）</el-button>
+        <el-button :loading="loading" @click="reload">Refresh</el-button>
       </div>
     </div>
 
     <div class="groups" v-loading="loading">
       <!-- 1. A/B Variable Tests -->
       <div class="group">
-        <div class="group-title">A/B Variable Tests（A/B 变量选择与检验）</div>
+        <div class="group-title">A/B Variable Tests</div>
 
         <div class="selectors">
-          <el-select v-model="varA" class="ctrl" placeholder="Select Variable A（选择变量 A）" @change="renderVarPair">
+          <el-select v-model="varA" class="ctrl" placeholder="Select Variable A" @change="renderVarPair">
             <el-option v-for="m in allMetricOptions" :key="m.key" :label="m.label" :value="m.key" />
           </el-select>
-          <el-select v-model="varB" class="ctrl" placeholder="Select Variable B（选择变量 B）" @change="renderVarPair">
+          <el-select v-model="varB" class="ctrl" placeholder="Select Variable B" @change="renderVarPair">
             <el-option v-for="m in allMetricOptions" :key="m.key" :label="m.label" :value="m.key" />
           </el-select>
-          <div class="tips">Auto-select suitable test and chart by variable types（根据变量类型自动选择检验与图表）</div>
+          <div class="tips">Auto-selects suitable test and chart based on variable types</div>
         </div>
 
         <div class="cards ab-test-cards">
-          <!-- 统计结果卡片 -->
+          <!-- Statistics card -->
           <div class="card stat-card">
             <div class="card-header">
-              <div class="card-title">Statistics（统计结果）</div>
+              <div class="card-title">Statistics</div>
             </div>
             <div class="stat-content">
               <div v-if="pairType === 'num-num'" class="stat-grid">
-                <div class="stat-item"><span>Pearson r（皮尔逊 r）：</span>{{ fmt(statsPair.pearson?.r) }}</div>
-                <div class="stat-item"><span>Sample Size n（样本量）：</span>{{ statsPair.commonN }}</div>
-                <div class="stat-item"><span>Spearman ρ（斯皮尔曼 ρ）：</span>{{ fmt(statsPair.spearman?.rho) }}</div>
-                <div class="stat-item"><span>Slope（斜率）：</span>{{ fmt(statsPair.reg?.slope) }}</div>
-                <div class="stat-item"><span>Intercept（截距）：</span>{{ fmt(statsPair.reg?.intercept) }}</div>
-                <div class="stat-item"><span>R²：</span>{{ fmt(statsPair.reg?.r2) }}</div>
+                <div class="stat-item"><span>Pearson r:</span>{{ fmt(statsPair.pearson?.r) }}</div>
+                <div class="stat-item"><span>Sample Size n:</span>{{ statsPair.commonN }}</div>
+                <div class="stat-item"><span>Spearman ρ:</span>{{ fmt(statsPair.spearman?.rho) }}</div>
+                <div class="stat-item"><span>Slope:</span>{{ fmt(statsPair.reg?.slope) }}</div>
+                <div class="stat-item"><span>Intercept:</span>{{ fmt(statsPair.reg?.intercept) }}</div>
+                <div class="stat-item"><span>R²:</span>{{ fmt(statsPair.reg?.r2) }}</div>
               </div>
               <div v-else-if="pairType === 'cat-cat'" class="stat-grid">
-                <div class="stat-item"><span>Chi-square χ²（卡方）：</span>{{ fmt(statsPair.chi2?.chi2) }}</div>
-                <div class="stat-item"><span>df（自由度）：</span>{{ statsPair.chi2?.df }}</div>
-                <div class="stat-item"><span>p-value（近似）：</span>{{ fmt(statsPair.chi2?.p) }}</div>
+                <div class="stat-item"><span>Chi-square χ²:</span>{{ fmt(statsPair.chi2?.chi2) }}</div>
+                <div class="stat-item"><span>df:</span>{{ statsPair.chi2?.df }}</div>
+                <div class="stat-item"><span>p-value (approx.):</span>{{ fmt(statsPair.chi2?.p) }}</div>
               </div>
               <div v-else-if="pairType === 'num-cat'" class="stat-grid">
-                <div class="stat-item"><span>#Groups（组数）：</span>{{ statsPair.group?.k }}</div>
-                <div class="stat-item" v-if="statsPair.group?.type === 'welch'"><span>Welch t：</span>{{ fmt(statsPair.group?.t) }}</div>
-                <div class="stat-item" v-if="statsPair.group?.type === 'welch'"><span>df（自由度 近似）：</span>{{ fmt(statsPair.group?.df) }}</div>
-                <div class="stat-item" v-if="statsPair.group?.type === 'welch'"><span>p-value（近似）：</span>{{ fmt(statsPair.group?.p) }}</div>
+                <div class="stat-item"><span>#Groups:</span>{{ statsPair.group?.k }}</div>
+                <div class="stat-item" v-if="statsPair.group?.type === 'welch'"><span>Welch t:</span>{{ fmt(statsPair.group?.t) }}</div>
+                <div class="stat-item" v-if="statsPair.group?.type === 'welch'"><span>df (approx.):</span>{{ fmt(statsPair.group?.df) }}</div>
+                <div class="stat-item" v-if="statsPair.group?.type === 'welch'"><span>p-value (approx.):</span>{{ fmt(statsPair.group?.p) }}</div>
                 <div class="stat-note" v-if="statsPair.group?.type === 'anova'">
-                  Multi-group mean comparison shown; for strict ANOVA please verify server-side（多组场景展示均值对比图；严格 ANOVA 建议后端复核）
+                  Multi-group mean comparison shown; for strict ANOVA please verify on the server side.
                 </div>
               </div>
-              <div v-else class="stat-note">Please pick two variables（请选择两个变量）</div>
+              <div v-else class="stat-note">Please pick two variables</div>
             </div>
           </div>
 
-          <!-- 可视化图表卡片 -->
+          <!-- Visualization card -->
           <div class="card chart-card">
             <div class="card-header">
-              <div class="card-title">Visualization（可视化）</div>
+              <div class="card-title">Visualization</div>
             </div>
             <div class="chart" ref="pairChartRef"></div>
           </div>
         </div>
 
-        <!-- 列联表热力图（只在 cat-cat 时显示，放在第二行） -->
+        <!-- Contingency heatmap (only for cat-cat, on a second row) -->
         <div class="cards contingency-cards" v-if="pairType === 'cat-cat'">
           <div class="card chart-card full-width">
             <div class="card-header">
-              <div class="card-title">Contingency Heatmap（列联表热力图）</div>
+              <div class="card-title">Contingency Heatmap</div>
             </div>
             <div class="chart" ref="contingencyHeatRef"></div>
           </div>
@@ -107,11 +106,11 @@
 
       <!-- 2. Correlation Matrix -->
       <div class="group">
-        <div class="group-title">Correlation Matrix (Pearson)（数值属性相关矩阵（皮尔逊））</div>
+        <div class="group-title">Correlation Matrix (Pearson)</div>
         <div class="cards single-card">
           <div class="card chart-card">
             <div class="card-header">
-              <div class="card-title">Heatmap（热力图）</div>
+              <div class="card-title">Heatmap</div>
             </div>
             <div class="chart" ref="corrHeatRef"></div>
           </div>
@@ -120,7 +119,7 @@
 
       <!-- 3. Age Trends -->
       <div class="group">
-        <div class="group-title">Means by Age Bucket（属性随年龄区间的均值变化）</div>
+        <div class="group-title">Means by Age Bucket</div>
 
         <div class="selectors">
           <el-select
@@ -129,18 +128,18 @@
               multiple
               collapse-tags
               :max-collapse-tags="3"
-              placeholder="Select metrics（选择多个数值属性）"
+              placeholder="Select numeric metrics"
               @change="renderAgeTrend"
           >
             <el-option v-for="m in numericMetricOptions" :key="m.key" :label="m.label" :value="m.key" />
           </el-select>
-          <div class="tips">Buckets: -∞~18, 18~30, …, 80+（按年龄分箱计算均值并绘制折线）</div>
+          <div class="tips">Buckets: -∞~18, 18~30, …, 80+ (mean per bucket)</div>
         </div>
 
         <div class="cards single-card">
           <div class="card chart-card">
             <div class="card-header">
-              <div class="card-title">Line Chart（折线图）</div>
+              <div class="card-title">Line Chart</div>
             </div>
             <div class="chart" ref="ageTrendRef"></div>
           </div>
@@ -149,23 +148,23 @@
 
       <!-- 4. Boxplot -->
       <div class="group">
-        <div class="group-title">Boxplot by Sex / Hypertension（箱线图：按性别或是否高血压分组）</div>
+        <div class="group-title">Boxplot by Sex / Hypertension</div>
 
         <div class="selectors">
-          <el-select v-model="boxMetricKey" class="ctrl" placeholder="Select numeric metric（选择数值指标）" @change="renderBoxplot">
+          <el-select v-model="boxMetricKey" class="ctrl" placeholder="Select numeric metric" @change="renderBoxplot">
             <el-option v-for="m in numericMetricOptions" :key="m.key" :label="m.label" :value="m.key" />
           </el-select>
-          <el-select v-model="boxGroupKey" class="ctrl" placeholder="Group by（分组方式）" @change="renderBoxplot">
-            <el-option label="Sex（性别）" value="sex" />
-            <el-option label="Hypertension History（高血压史）" value="hypertensionHistory" />
+          <el-select v-model="boxGroupKey" class="ctrl" placeholder="Group by" @change="renderBoxplot">
+            <el-option label="Sex" value="sex" />
+            <el-option label="Hypertension History" value="hypertensionHistory" />
           </el-select>
-          <div class="tips">Show Q1/Median/Q3, whiskers (1.5×IQR), and outliers（显示四分位、须与异常点）</div>
+          <div class="tips">Show Q1/Median/Q3, whiskers (1.5×IQR), and outliers</div>
         </div>
 
         <div class="cards single-card">
           <div class="card chart-card">
             <div class="card-header">
-              <div class="card-title">{{ metricLabel(boxMetricKey) }} — Boxplot（箱线图）</div>
+              <div class="card-title">{{ metricLabel(boxMetricKey) }} — Boxplot</div>
             </div>
             <div class="chart" ref="boxplotRef"></div>
           </div>
@@ -174,23 +173,23 @@
 
       <!-- 5. Bootstrap CI -->
       <div class="group">
-        <div class="group-title">Mean & 95% CI (Bootstrap)（均值与 95% 置信区间：Bootstrap）</div>
+        <div class="group-title">Mean & 95% CI (Bootstrap)</div>
 
         <div class="selectors">
-          <el-select v-model="ciMetricKey" class="ctrl" placeholder="Select numeric metric（选择数值指标）" @change="renderBootstrapCI">
+          <el-select v-model="ciMetricKey" class="ctrl" placeholder="Select numeric metric" @change="renderBootstrapCI">
             <el-option v-for="m in numericMetricOptions" :key="m.key" :label="m.label" :value="m.key" />
           </el-select>
-          <el-select v-model="ciGroupKey" class="ctrl" placeholder="Group by（分组方式）" @change="renderBootstrapCI">
-            <el-option label="Sex（性别）" value="sex" />
-            <el-option label="Hypertension History（高血压史）" value="hypertensionHistory" />
+          <el-select v-model="ciGroupKey" class="ctrl" placeholder="Group by" @change="renderBootstrapCI">
+            <el-option label="Sex" value="sex" />
+            <el-option label="Hypertension History" value="hypertensionHistory" />
           </el-select>
-          <div class="tips">Per-group bootstrap (default 1000) — 2.5%~97.5% quantiles as 95% CI（每组自助抽样取分位构造 95% CI）</div>
+          <div class="tips">Per-group bootstrap (default 1000) — 2.5%~97.5% quantiles as 95% CI</div>
         </div>
 
         <div class="cards single-card">
           <div class="card chart-card">
             <div class="card-header">
-              <div class="card-title">{{ metricLabel(ciMetricKey) }} — Mean & 95% CI（均值与置信区间）</div>
+              <div class="card-title">{{ metricLabel(ciMetricKey) }} — Mean & 95% CI</div>
             </div>
             <div class="chart" ref="ciRef"></div>
           </div>
@@ -216,8 +215,8 @@ export default {
       raw: [],
 
       // Global filters
-      globalSex: 'All（全部）',
-      globalAgeBucket: 'All（全部）',
+      globalSex: 'All',
+      globalAgeBucket: 'All',
 
       // A/B selections
       varA: 'totalCholesterol',
@@ -232,21 +231,21 @@ export default {
       ciMetricKey: 'totalCholesterol',
       ciGroupKey: 'sex',
 
-      // Metric definitions (labels bilingual)
+      // Metric definitions (labels in English)
       metrics: [
-        { key: 'totalCholesterol', label: 'Total Cholesterol（总胆固醇）', kind: 'number', buckets: [3,4,5,6,7,8] },
-        { key: 'triglyceride',     label: 'Triglyceride（甘油三酯）', kind: 'number', buckets: [0.8,1.7,2.3,5.6] },
-        { key: 'hdlC',             label: 'HDL-C（高密度脂蛋白）', kind: 'number', buckets: [0.8,1.0,1.3,1.6] },
-        { key: 'ldlC',             label: 'LDL-C（低密度脂蛋白）', kind: 'number', buckets: [1.8,2.6,3.4,4.1] },
-        { key: 'vldlC',            label: 'VLDL-C（极低密度脂蛋白）', kind: 'number', buckets: [0.2,0.4,0.8] },
-        { key: 'pulse',            label: 'Pulse (bpm)（脉搏）', kind: 'number', buckets: [60,80,100,120] },
-        { key: 'diastolicBp',      label: 'Diastolic BP (mmHg)（舒张压）', kind: 'number', buckets: [60,80,90,100] },
-        { key: 'bun',              label: 'BUN（尿素氮）', kind: 'number', buckets: [3,7,9] },
-        { key: 'uricAcid',         label: 'Uric Acid（尿酸）', kind: 'number', buckets: [240,360,420,480] },
-        { key: 'creatinine',       label: 'Creatinine（肌酐）', kind: 'number', buckets: [60,97,133,186] },
-        { key: 'age',              label: 'Age（年龄）', kind: 'number', buckets: [18,30,40,50,60,70,80] },
-        { key: 'sex',              label: 'Sex（性别）', kind: 'enum' },
-        { key: 'hypertensionHistory', label: 'Hypertension History（高血压史）', kind: 'bool' },
+        { key: 'totalCholesterol', label: 'Total Cholesterol', kind: 'number', buckets: [3,4,5,6,7,8] },
+        { key: 'triglyceride',     label: 'Triglyceride',      kind: 'number', buckets: [0.8,1.7,2.3,5.6] },
+        { key: 'hdlC',             label: 'HDL-C',             kind: 'number', buckets: [0.8,1.0,1.3,1.6] },
+        { key: 'ldlC',             label: 'LDL-C',             kind: 'number', buckets: [1.8,2.6,3.4,4.1] },
+        { key: 'vldlC',            label: 'VLDL-C',            kind: 'number', buckets: [0.2,0.4,0.8] },
+        { key: 'pulse',            label: 'Pulse (bpm)',       kind: 'number', buckets: [60,80,100,120] },
+        { key: 'diastolicBp',      label: 'Diastolic BP (mmHg)', kind: 'number', buckets: [60,80,90,100] },
+        { key: 'bun',              label: 'BUN',               kind: 'number', buckets: [3,7,9] },
+        { key: 'uricAcid',         label: 'Uric Acid',         kind: 'number', buckets: [240,360,420,480] },
+        { key: 'creatinine',       label: 'Creatinine',        kind: 'number', buckets: [60,97,133,186] },
+        { key: 'age',              label: 'Age',               kind: 'number', buckets: [18,30,40,50,60,70,80] },
+        { key: 'sex',              label: 'Sex',               kind: 'enum' },
+        { key: 'hypertensionHistory', label: 'Hypertension History', kind: 'bool' },
       ],
 
       // Refs
@@ -272,11 +271,11 @@ export default {
 
   computed: {
     sexOptions() {
-      return ['All（全部）', 'Male（男）', 'Female（女）', 'Other（其他）', 'Unknown（未知）']
+      return ['All', 'Male', 'Female', 'Other', 'Unknown']
     },
     ageBucketOptions() {
       const labels = this.bucketLabels([18,30,40,50,60,70,80])
-      return ['All（全部）', ...labels]
+      return ['All', ...labels]
     },
     allMetricOptions() {
       return this.metrics.map(m => ({ key: m.key, label: m.label, kind: m.kind }))
@@ -299,17 +298,17 @@ export default {
   async mounted() {
     await this.fetchAll()
 
-    // 检查并修复负数年龄
+    // Check and fix negative ages
     const negativeCount = this.checkNegativeAges()
     if (negativeCount > 0) {
-      console.log(`发现并修复了 ${negativeCount} 条负数年龄记录`)
+      console.log(`Found and fixed ${negativeCount} records with negative age`)
     }
 
-    // 测试各种边界情况
-    console.log('年龄分桶测试:')
+    // Boundary tests
+    console.log('Age bucket tests:')
     const testCases = [
-      { age: -5, expected: '未知 (Unknown)' },
-      { age: -1, expected: '未知 (Unknown)' },
+      { age: -5, expected: 'Unknown' },
+      { age: -1, expected: 'Unknown' },
       { age: 0, expected: '0~18' },
       { age: 17, expected: '0~18' },
       { age: 18, expected: '18~30' },
@@ -320,7 +319,7 @@ export default {
     testCases.forEach(test => {
       const result = this.ageBucket(test.age)
       const status = result === test.expected ? '✓' : '✗'
-      console.log(`${status} 年龄 ${test.age} -> ${result} (期望: ${test.expected})`)
+      console.log(`${status} age ${test.age} -> ${result} (expected: ${test.expected})`)
     })
 
     this.$nextTick(() => this.renderAll())
@@ -340,11 +339,10 @@ export default {
         const res = await getAllHealthRecords()
         const data = Array.isArray(res?.data) ? res.data : (res?.data?.data ?? [])
 
-        // 清理数据：将负数年龄设为 null
+        // Cleanup: set negative/invalid ages to null
         this.raw = (data || []).map(record => {
           if (record.age != null) {
             const age = Number(record.age)
-            // 明确拒绝负数
             if (isNaN(age) || !isFinite(age) || age < 0 || age > 150) {
               return { ...record, age: null }
             }
@@ -352,22 +350,22 @@ export default {
           return record
         })
 
-        // 统计信息
+        // Stats log
         const validAges = this.raw.map(r => r.age).filter(age => age != null && age >= 0)
         const negativeAges = this.raw.filter(r => {
           const age = Number(r.age)
           return !isNaN(age) && age < 0
         })
 
-        console.log('数据清理统计:', {
-          总记录数: this.raw.length,
-          有效年龄数: validAges.length,
-          负数年龄数: negativeAges.length,
-          负数年龄样例: negativeAges.slice(0, 3).map(r => r.age)
+        console.log('Data cleanup stats:', {
+          total: this.raw.length,
+          validAgeCount: validAges.length,
+          negativeAgeCount: negativeAges.length,
+          negativeAgeSamples: negativeAges.slice(0, 3).map(r => r.age)
         })
 
       } catch (e) {
-        ElMessage.error(e?.message || 'Load failed（加载失败）')
+        ElMessage.error(e?.message || 'Load failed')
         this.raw = []
       } finally {
         this.loading = false
@@ -395,35 +393,24 @@ export default {
     metricDef(key){ return this.metrics.find(m=>m.key===key) },
     metricLabel(key){ return this.metricDef(key)?.label || key },
     bucketize(val, cuts) {
-      // 首先检查值的有效性
       if (val == null || Number.isNaN(val) || !isFinite(val)) {
-        return '未知 (Unknown)'
+        return 'Unknown'
       }
-
-      // 明确拒绝负数年龄
       if (val < 0) {
-        return '未知 (Unknown)'
+        return 'Unknown'
       }
-
       if (!cuts || !Array.isArray(cuts) || cuts.length === 0) {
-        return '未知 (Unknown)'
+        return 'Unknown'
       }
-
       const sortedCuts = [...cuts].sort((a, b) => a - b)
-
-      // 第一个区间：0 ~ 第一个切割点（不包括第一个切割点）
       if (val < sortedCuts[0]) {
         return `0~${sortedCuts[0]}`
       }
-
-      // 中间区间
       for (let i = 1; i < sortedCuts.length; i++) {
         if (val < sortedCuts[i]) {
           return `${sortedCuts[i-1]}~${sortedCuts[i]}`
         }
       }
-
-      // 最后一个区间
       return `${sortedCuts[sortedCuts.length - 1]}+`
     },
     bucketLabels(cuts){
@@ -432,15 +419,16 @@ export default {
       a.push(`${cuts[cuts.length-1]}+`)
       return a
     },
-    ageBucket(n){ if(n==null) return 'Unknown（未知）'; return this.bucketize(n,[18,30,40,50,60,70,80]) },
+    ageBucket(n){ if(n==null) return 'Unknown'; return this.bucketize(n,[18,30,40,50,60,70,80]) },
     applyGlobalFilters(records){
       let arr = records || []
-      if (this.globalSex !== 'All（全部）') arr = arr.filter(r => (this.sexLabel(r?.sex ?? '未知') === this.globalSex))
-      if (this.globalAgeBucket !== 'All（全部）') arr = arr.filter(r => this.ageBucket(r?.age ?? null) === this.globalAgeBucket)
+      if (this.globalSex !== 'All') arr = arr.filter(r => (this.sexLabel(r?.sex ?? 'Unknown') === this.globalSex))
+      if (this.globalAgeBucket !== 'All') arr = arr.filter(r => this.ageBucket(r?.age ?? null) === this.globalAgeBucket)
       return arr
     },
+    // Map possible Chinese backend values to English display labels
     sexLabel(v){
-      const map = { '男':'Male（男）', '女':'Female（女）', '其他':'Other（其他）', '未知':'Unknown（未知）' }
+      const map = { '男':'Male', '女':'Female', '其他':'Other', '未知':'Unknown' }
       return map[v] ?? String(v)
     },
     fmt(v){ if(v==null||Number.isNaN(v)) return '—'; if(typeof v!=='number') return v; const a=Math.abs(v)<1?v.toFixed(4):v.toFixed(3); return String(Number(a)) },
@@ -471,10 +459,10 @@ export default {
       const map=new Map()
       for(const r of this.filtered()){
         const v=r[numKey]; let g=r[catKey]
-        if(catKey==='hypertensionHistory') g = r[catKey] ? 'Yes（是）':'No（否）'
-        if(catKey==='sex') g = this.sexLabel(r[catKey] ?? '未知')
+        if(catKey==='hypertensionHistory') g = r[catKey] ? 'Yes' : 'No'
+        if(catKey==='sex') g = this.sexLabel(r[catKey] ?? 'Unknown')
         if(typeof v==='number'&&!Number.isNaN(v)){
-          const key=String(g??'Unknown（未知）')
+          const key=String(g??'Unknown')
           if(!map.has(key)) map.set(key,[])
           map.get(key).push(v)
         }
@@ -485,11 +473,11 @@ export default {
       const rowsSet=new Set(), colsSet=new Set(), pairs=[]
       for(const r of this.filtered()){
         let a=r[aKey], b=r[bKey]
-        if(aKey==='hypertensionHistory') a=r[aKey]?'Yes（是）':'No（否）'
-        if(bKey==='hypertensionHistory') b=r[bKey]?'Yes（是）':'No（否）'
-        if(aKey==='sex') a=this.sexLabel(a ?? '未知')
-        if(bKey==='sex') b=this.sexLabel(b ?? '未知')
-        a=String(a??'Unknown（未知）'); b=String(b??'Unknown（未知）')
+        if(aKey==='hypertensionHistory') a=r[aKey]?'Yes':'No'
+        if(bKey==='hypertensionHistory') b=r[bKey]?'Yes':'No'
+        if(aKey==='sex') a=this.sexLabel(a ?? 'Unknown')
+        if(bKey==='sex') b=this.sexLabel(b ?? 'Unknown')
+        a=String(a??'Unknown'); b=String(b??'Unknown')
         rowsSet.add(a); colsSet.add(b); pairs.push([a,b])
       }
       const rows=Array.from(rowsSet).sort(), cols=Array.from(colsSet).sort()
@@ -525,19 +513,19 @@ export default {
         const fit=[[minX,reg.intercept+reg.slope*minX],[maxX,reg.intercept+reg.slope*maxX]]
         this.pairChart.setOption({
           title:{
-            text: `${this.metricLabel(this.varA)} vs ${this.metricLabel(this.varB)}（散点与回归）`,
+            text: `${this.metricLabel(this.varA)} vs ${this.metricLabel(this.varB)} — Scatter & Regression`,
             left: 'center',
-            top: 8,  // 更靠近顶部
+            top: 8,
             textStyle: {
-              fontSize: 14,  // 字体变小
-              fontWeight: 'normal'  // 字体重量变正常
+              fontSize: 14,
+              fontWeight: 'normal'
             }
           },
           tooltip:{ trigger:'item' },
           grid:{
             left: 20,
             right: 50,
-            top: 40,  // 减少顶部间距，让标题更靠近图表
+            top: 40,
             bottom: 50,
             containLabel: true
           },
@@ -554,27 +542,12 @@ export default {
           legend:{
             right: 10,
             bottom: 10,
-            data:['Samples（样本）','Fit Line（拟合线）'],
-            textStyle: {
-              fontSize: 12  // 图例字体也相应变小
-            }
+            data:['Samples','Fit Line'],
+            textStyle: { fontSize: 12 }
           },
           series:[
-            {
-              name:'Samples（样本）',
-              type:'scatter',
-              data,
-              symbolSize: 6  // 散点大小稍微调小
-            },
-            {
-              name:'Fit Line（拟合线）',
-              type:'line',
-              data:fit,
-              showSymbol:false,
-              lineStyle: {
-                width: 2
-              }
-            }
+            { name:'Samples', type:'scatter', data, symbolSize: 6 },
+            { name:'Fit Line', type:'line', data:fit, showSymbol:false, lineStyle: { width: 2 } }
           ]
         })
         if(this.contingencyHeat){ this.contingencyHeat.dispose(); this.contingencyHeat=null }
@@ -588,45 +561,24 @@ export default {
         }))
         this.pairChart.setOption({
           title:{
-            text: `${this.metricLabel(this.varA)} × ${this.metricLabel(this.varB)} — Stacked Bars（堆叠柱）`,
+            text: `${this.metricLabel(this.varA)} × ${this.metricLabel(this.varB)} — Stacked Bars`,
             left: 'center',
             top: 8,
-            textStyle: {
-              fontSize: 14,
-              fontWeight: 'normal'
-            }
+            textStyle: { fontSize: 14, fontWeight: 'normal' }
           },
           tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' } },
-          legend:{
-            right:10,
-            bottom:10,
-            textStyle: {
-              fontSize: 12
-            }
-          },
-          grid:{
-            left:50,
-            right:30,
-            top:40,  // 调整顶部间距
-            bottom:60,
-            containLabel:true
-          },
+          legend:{ right:10, bottom:10, textStyle: { fontSize: 12 } },
+          grid:{ left:50, right:30, top:40, bottom:60, containLabel:true },
           xAxis:{
             type:'category',
             data:categories,
-            axisLabel:{
-              interval:0,
-              rotate:20,
-              fontSize: 11  // X轴标签字体调小
-            }
+            axisLabel:{ interval:0, rotate:20, fontSize: 11 }
           },
           yAxis:{
             type:'value',
-            name:'Count（计数）',
+            name:'Count',
             splitLine:{ lineStyle:{ color:'#F3F4F6' } },
-            nameTextStyle: {
-              fontSize: 11  // Y轴名称字体调小
-            }
+            nameTextStyle: { fontSize: 11 }
           },
           series
         })
@@ -634,39 +586,11 @@ export default {
         const heatData=[]
         for(let i=0;i<ct.rows.length;i++){ for(let j=0;j<ct.cols.length;j++){ heatData.push([j,i,ct.table[i][j]]) } }
         this.contingencyHeat.setOption({
-          title:{
-            text:'Contingency Heatmap（列联表热力图）',
-            left:'center',
-            top:6,
-            textStyle: {
-              fontSize: 14,
-              fontWeight: 'normal'
-            }
-          },
+          title:{ text:'Contingency Heatmap', left:'center', top:6, textStyle: { fontSize: 14, fontWeight: 'normal' } },
           tooltip:{ position:'top' },
-          grid:{
-            left:70,
-            right:30,
-            top:35,  // 调整顶部间距
-            bottom:60,
-            containLabel:true
-          },
-          xAxis:{
-            type:'category',
-            data:ct.cols,
-            splitArea:{ show:true },
-            axisLabel: {
-              fontSize: 11
-            }
-          },
-          yAxis:{
-            type:'category',
-            data:ct.rows,
-            splitArea:{ show:true },
-            axisLabel: {
-              fontSize: 11
-            }
-          },
+          grid:{ left:70, right:30, top:35, bottom:60, containLabel:true },
+          xAxis:{ type:'category', data:ct.cols, splitArea:{ show:true }, axisLabel: { fontSize: 11 } },
+          yAxis:{ type:'category', data:ct.rows, splitArea:{ show:true }, axisLabel: { fontSize: 11 } },
           visualMap:{
             min:0,
             max:Math.max(1,...heatData.map(d=>d[2])),
@@ -674,9 +598,7 @@ export default {
             orient:'horizontal',
             left:'center',
             bottom:10,
-            textStyle: {
-              fontSize: 11
-            }
+            textStyle: { fontSize: 11 }
           },
           series:[{ type:'heatmap', data:heatData, label:{ show:true } }]
         })
@@ -694,70 +616,40 @@ export default {
         }
         this.pairChart.setOption({
           title:{
-            text: `Group Means of ${this.metricLabel(numKey)} by ${this.metricLabel(catKey)}（组均值）`,
+            text: `Group Means of ${this.metricLabel(numKey)} by ${this.metricLabel(catKey)}`,
             left: 'center',
             top: 8,
-            textStyle: {
-              fontSize: 14,
-              fontWeight: 'normal'
-            }
+            textStyle: { fontSize: 14, fontWeight: 'normal' }
           },
           tooltip:{ trigger:'axis' },
-          legend:{
-            right:10,
-            bottom:10,
-            data:[`Mean（均值）`],
-            textStyle: {
-              fontSize: 12
-            }
-          },
-          grid:{
-            left:50,
-            right:30,
-            top:40,  // 调整顶部间距
-            bottom:60,
-            containLabel:true
-          },
-          xAxis:{
-            type:'category',
-            data:cats,
-            axisLabel:{
-              interval:0,
-              rotate:20,
-              fontSize: 11
-            }
-          },
+          legend:{ right:10, bottom:10, data:['Mean'], textStyle: { fontSize: 12 } },
+          grid:{ left:50, right:30, top:40, bottom:60, containLabel:true },
+          xAxis:{ type:'category', data:cats, axisLabel:{ interval:0, rotate:20, fontSize: 11 } },
           yAxis:{
             type:'value',
-            name:'Mean（均值）',
+            name:'Mean',
             splitLine:{ lineStyle:{ color:'#F3F4F6' } },
-            nameTextStyle: {
-              fontSize: 11
-            }
+            nameTextStyle: { fontSize: 11 }
           },
           series:[{
-            name:'Mean（均值）',
+            name:'Mean',
             type:'bar',
             data:means,
             barMaxWidth:40,
-            label:{
-              show:true,
-              position:'top',
-              fontSize: 11  // 柱状图标签字体调小
-            }
+            label:{ show:true, position:'top', fontSize: 11 }
           }]
         })
         if(this.contingencyHeat){ this.contingencyHeat.dispose(); this.contingencyHeat=null }
       }
     },
 
-    // 其他渲染方法也相应调整标题样式
+    // Other renderers with adjusted titles
     renderCorrMatrix(){
       const numKeys = this.metrics.filter(m => m.kind === 'number').map(m => m.key)
       const data = this.applyGlobalFilters(this.raw)
       const mat = []
 
-      // 计算相关系数矩阵
+      // Compute correlation matrix
       for(let i = 0; i < numKeys.length; i++){
         for(let j = 0; j < numKeys.length; j++){
           const xi = data.map(r => r[numKeys[i]]).filter(v => typeof v === 'number' && !Number.isNaN(v))
@@ -773,72 +665,43 @@ export default {
 
       this.corrHeat.setOption({
         title: {
-          text: 'Correlation Matrix（相关矩阵）',
+          text: 'Correlation Matrix',
           left: 'center',
           top: 10,
-          textStyle: {
-            fontSize: 16,
-            fontWeight: 'bold',
-            color: '#333'
-          }
+          textStyle: { fontSize: 16, fontWeight: 'bold', color: '#333' }
         },
         tooltip: {
           position: 'top',
           backgroundColor: 'rgba(0,0,0,0.8)',
           borderColor: '#333',
-          textStyle: {
-            color: '#fff'
-          },
+          textStyle: { color: '#fff' },
           formatter: p => {
             const value = p.value[2]
-            const strength = Math.abs(value) > 0.7 ? '强' : Math.abs(value) > 0.3 ? '中等' : '弱'
+            const abs = Math.abs(value)
+            const strength = abs > 0.7 ? 'Strong' : abs > 0.3 ? 'Moderate' : 'Weak'
             return `
-          <div style="text-align: center;">
-            <div><strong>${labels[p.value[1]]} × ${labels[p.value[0]]}</strong></div>
-            <div>相关系数: <strong>${this.fmt(value)}</strong></div>
-            <div style="font-size: 12px; color: #ccc">${strength}相关</div>
-          </div>
-        `
+              <div style="text-align:center;">
+                <div><strong>${labels[p.value[1]]} × ${labels[p.value[0]]}</strong></div>
+                <div>Correlation: <strong>${this.fmt(value)}</strong></div>
+                <div style="font-size:12px;color:#ccc">${strength}</div>
+              </div>
+            `
           }
         },
-        grid: {
-          left: 120,
-          right: 40,
-          top: 50,
-          bottom: 100,
-          height: numKeys.length * 30,
-          width: 'auto',
-          containLabel: true
-        },
+        grid: { left: 120, right: 40, top: 50, bottom: 100, height: numKeys.length * 30, width: 'auto', containLabel: true },
         xAxis: {
           type: 'category',
           data: labels,
           splitArea: { show: true },
-          axisLabel: {
-            rotate: 45,
-            fontSize: 11,
-            interval: 0,
-            margin: 15
-          },
-          axisLine: {
-            lineStyle: {
-              color: '#ccc'
-            }
-          }
+          axisLabel: { rotate: 45, fontSize: 11, interval: 0, margin: 15 },
+          axisLine: { lineStyle: { color: '#ccc' } }
         },
         yAxis: {
           type: 'category',
           data: labels,
           splitArea: { show: true },
-          axisLabel: {
-            fontSize: 11,
-            margin: 10
-          },
-          axisLine: {
-            lineStyle: {
-              color: '#ccc'
-            }
-          }
+          axisLabel: { fontSize: 11, margin: 10 },
+          axisLine: { lineStyle: { color: '#ccc' } }
         },
         visualMap: {
           min: -1,
@@ -849,40 +712,26 @@ export default {
           bottom: 30,
           itemWidth: 12,
           itemHeight: 80,
-          textStyle: {
-            fontSize: 10
-          },
-          // 方案1：使用简单的颜色渐变（推荐）
-          inRange: {
-            color: ['#1a3670', '#597ef7', '#adc6ff', '#f0f0f0', '#ffccc7', '#ff4d4f', '#a8071a']
-          }
+          textStyle: { fontSize: 10 },
+          // Simple gradient palette
+          inRange: { color: ['#1a3670', '#597ef7', '#adc6ff', '#f0f0f0', '#ffccc7', '#ff4d4f', '#a8071a'] }
         },
         series: [{
           type: 'heatmap',
           data: mat,
-          emphasis: {
-            itemStyle: {
-              shadowBlur: 10,
-              shadowColor: 'rgba(0, 0, 0, 0.5)'
-            }
-          },
+          emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0, 0, 0, 0.5)' } },
           label: {
             show: true,
             formatter: ({ value }) => {
               const num = value[2]
-              if (Math.abs(num) > 0.3) {
-                return this.fmt(num)
-              }
+              if (Math.abs(num) > 0.3) return this.fmt(num)
               return ''
             },
             color: '#333',
             fontSize: 10,
             fontWeight: 'bold'
           },
-          itemStyle: {
-            borderColor: '#fff',
-            borderWidth: 1
-          }
+          itemStyle: { borderColor: '#fff', borderWidth: 1 }
         }]
       })
     },
@@ -899,44 +748,16 @@ export default {
         series.push({ name:this.metricLabel(key), type:'line', data:values, connectNulls:true, smooth:true })
       }
       this.ageTrendChart.setOption({
-        title:{
-          text:'Means by Age Bucket（按年龄区间的均值变化）',
-          left:'center',
-          top:8,
-          textStyle: {
-            fontSize: 14,
-            fontWeight: 'normal'
-          }
-        },
+        title:{ text:'Means by Age Bucket', left:'center', top:8, textStyle: { fontSize: 14, fontWeight: 'normal' } },
         tooltip:{ trigger:'axis' },
-        legend:{
-          right:10,
-          bottom:10,
-          textStyle: {
-            fontSize: 12
-          }
-        },
-        grid:{
-          left:50,
-          right:30,
-          top:40,  // 调整顶部间距
-          bottom:60,
-          containLabel:true
-        },
-        xAxis:{
-          type:'category',
-          data:labels,
-          axisLabel: {
-            fontSize: 11
-          }
-        },
+        legend:{ right:10, bottom:10, textStyle: { fontSize: 12 } },
+        grid:{ left:50, right:30, top:40, bottom:60, containLabel:true },
+        xAxis:{ type:'category', data:labels, axisLabel: { fontSize: 11 } },
         yAxis:{
           type:'value',
-          name:'Mean（均值）',
+          name:'Mean',
           splitLine:{ lineStyle:{ color:'#F3F4F6' } },
-          nameTextStyle: {
-            fontSize: 11
-          }
+          nameTextStyle: { fontSize: 11 }
         },
         series
       })
@@ -969,51 +790,20 @@ export default {
         }
       })
       this.boxplotChart.setOption({
-        title:{
-          text:`${this.metricLabel(key)} — Boxplot（箱线图）`,
-          left:'center',
-          top:8,
-          textStyle: {
-            fontSize: 14,
-            fontWeight: 'normal'
-          }
-        },
+        title:{ text:`${this.metricLabel(key)} — Boxplot`, left:'center', top:8, textStyle: { fontSize: 14, fontWeight: 'normal' } },
         tooltip:{ trigger:'item' },
-        grid:{
-          left:60,
-          right:30,
-          top:40,  // 调整顶部间距
-          bottom:60,
-          containLabel:true
-        },
-        xAxis:{
-          type:'category',
-          data:cats,
-          axisLabel:{
-            interval:0,
-            rotate:20,
-            fontSize: 11
-          }
-        },
+        grid:{ left:60, right:30, top:40, bottom:60, containLabel:true },
+        xAxis:{ type:'category', data:cats, axisLabel:{ interval:0, rotate:20, fontSize: 11 } },
         yAxis:{
           type:'value',
           name:this.metricLabel(key),
           splitLine:{ lineStyle:{ color:'#F3F4F6' } },
-          nameTextStyle: {
-            fontSize: 11
-          }
+          nameTextStyle: { fontSize: 11 }
         },
-        legend:{
-          right:10,
-          bottom:10,
-          data:['Box（箱线）','Outliers（异常点）'],
-          textStyle: {
-            fontSize: 12
-          }
-        },
+        legend:{ right:10, bottom:10, data:['Box','Outliers'], textStyle: { fontSize: 12 } },
         series:[
-          { name:'Box（箱线）', type:'boxplot', data:five, itemStyle:{ borderColor:'#4B5563' } },
-          { name:'Outliers（异常点）', type:'scatter', data:outliers.map(([i,v])=>[cats[i],v]) }
+          { name:'Box', type:'boxplot', data:five, itemStyle:{ borderColor:'#4B5563' } },
+          { name:'Outliers', type:'scatter', data:outliers.map(([i,v])=>[cats[i],v]) }
         ]
       })
     },
@@ -1057,55 +847,25 @@ export default {
         }
       }
       this.ciChart.setOption({
-        title:{
-          text:`${this.metricLabel(key)} — Mean & 95% CI（均值与置信区间）`,
-          left:'center',
-          top:8,
-          textStyle: {
-            fontSize: 14,
-            fontWeight: 'normal'
-          }
-        },
+        title:{ text:`${this.metricLabel(key)} — Mean & 95% CI`, left:'center', top:8, textStyle: { fontSize: 14, fontWeight: 'normal' } },
         tooltip:{ trigger:'axis' },
-        legend:{
-          right:10,
-          bottom:10,
-          data:['Mean（均值）','95% CI（置信区间）'],
-          textStyle: {
-            fontSize: 12
-          }
-        },
-        grid:{
-          left:60,
-          right:40,
-          top:40,  // 调整顶部间距
-          bottom:60,
-          containLabel:true
-        },
-        xAxis:{
-          type:'category',
-          data:categories,
-          axisLabel:{
-            interval:0,
-            rotate:20,
-            fontSize: 11
-          }
-        },
+        legend:{ right:10, bottom:10, data:['Mean','95% CI'], textStyle: { fontSize: 12 } },
+        grid:{ left:60, right:40, top:40, bottom:60, containLabel:true },
+        xAxis:{ type:'category', data:categories, axisLabel:{ interval:0, rotate:20, fontSize: 11 } },
         yAxis:{
           type:'value',
-          name:'Mean（均值）',
+          name:'Mean',
           splitLine:{ lineStyle:{ color:'#F3F4F6' } },
-          nameTextStyle: {
-            fontSize: 11
-          }
+          nameTextStyle: { fontSize: 11 }
         },
         series:[
-          { name:'Mean（均值）', type:'bar', data:means, barMaxWidth:40, label:{ show:true, position:'top', formatter:({value})=>this.fmt(value) } },
-          { name:'95% CI（置信区间）', type:'custom', encode:{ x:0, y:[1,2] }, data: errData, renderItem, z: 10 }
+          { name:'Mean', type:'bar', data:means, barMaxWidth:40, label:{ show:true, position:'top', formatter:({value})=>this.fmt(value) } },
+          { name:'95% CI', type:'custom', encode:{ x:0, y:[1,2] }, data: errData, renderItem, z: 10 }
         ]
       })
     },
-    // 专门检查负数年龄的方法
+
+    // Helper to check negative ages
     checkNegativeAges() {
       const negativeAges = this.raw.filter(record => {
         const age = Number(record.age)
@@ -1113,15 +873,15 @@ export default {
       })
 
       if (negativeAges.length > 0) {
-        console.warn('发现负数年龄记录:', negativeAges)
-        // 可以选择自动修复
+        console.warn('Found negative age records:', negativeAges)
+        // Auto-fix
         negativeAges.forEach(record => {
           const index = this.raw.findIndex(r => r === record)
           if (index !== -1) {
             this.raw[index] = { ...record, age: null }
           }
         })
-        console.log('已自动修复负数年龄记录')
+        console.log('Auto-fixed negative age records')
       }
 
       return negativeAges.length
@@ -1198,7 +958,7 @@ export default {
   min-width: 300px;
 }
 
-/* Groups Container */
+/* Groups container */
 .groups {
   flex: 1;
   min-height: 0;
@@ -1210,25 +970,12 @@ export default {
   padding-right: 4px;
 }
 
-.groups::-webkit-scrollbar {
-  width: 6px;
-}
+.groups::-webkit-scrollbar { width: 6px; }
+.groups::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+.groups::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+.groups::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-.groups::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 3px;
-}
-
-.groups::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
-}
-
-.groups::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-/* Group Sections */
+/* Group section */
 .group {
   background: white;
   border-radius: 12px;
@@ -1267,10 +1014,10 @@ export default {
   min-width: 200px;
 }
 
-/* Cards Layout - A/B Test 特殊布局 */
+/* Cards layout - A/B Test layout */
 .ab-test-cards {
   display: grid;
-  grid-template-columns: 1fr 2fr; /* 统计结果占1份，图表占2份 */
+  grid-template-columns: 1fr 2fr; /* stats:1, chart:2 */
   gap: 20px;
   margin-bottom: 20px;
 }
@@ -1281,9 +1028,7 @@ export default {
   gap: 20px;
 }
 
-.cards.single-card {
-  grid-template-columns: 1fr;
-}
+.cards.single-card { grid-template-columns: 1fr; }
 
 /* Cards */
 .card {
@@ -1303,17 +1048,10 @@ export default {
   border-color: #cbd5e1;
 }
 
-.stat-card {
-  min-height: 400px;
-}
+.stat-card { min-height: 400px; }
+.chart-card { min-height: 400px; }
 
-.chart-card {
-  min-height: 400px;
-}
-
-.card.full-width {
-  grid-column: 1 / -1;
-}
+.card.full-width { grid-column: 1 / -1; }
 
 .card-header {
   display: flex;
@@ -1332,7 +1070,7 @@ export default {
   margin: 0;
 }
 
-/* Stat Content */
+/* Stat content */
 .stat-content {
   padding: 20px;
   flex: 1;
@@ -1340,11 +1078,7 @@ export default {
   flex-direction: column;
 }
 
-.stat-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+.stat-grid { display: flex; flex-direction: column; gap: 12px; }
 
 .stat-item {
   display: flex;
@@ -1357,9 +1091,7 @@ export default {
   transition: background-color 0.2s ease;
 }
 
-.stat-item:hover {
-  background: #f1f5f9;
-}
+.stat-item:hover { background: #f1f5f9; }
 
 .stat-item span {
   font-weight: 500;
@@ -1387,153 +1119,63 @@ export default {
 }
 
 /* Chart container */
-.chart {
-  flex: 1;
-  min-height: 320px;
-  padding: 8px;
-}
+.chart { flex: 1; min-height: 320px; padding: 8px; }
 
-/* Responsive Design */
+/* Responsive */
 @media (max-width: 1200px) {
-  .ab-test-cards {
-    grid-template-columns: 1fr;
-  }
-
-  .cards.single-card {
-    grid-template-columns: 1fr;
-  }
+  .ab-test-cards { grid-template-columns: 1fr; }
+  .cards.single-card { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 968px) {
-  .ab-test-cards {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .stat-card, .chart-card {
-    min-height: 350px;
-  }
+  .ab-test-cards { grid-template-columns: 1fr; gap: 16px; }
+  .stat-card, .chart-card { min-height: 350px; }
 }
 
 @media (max-width: 768px) {
-  .dashboard {
-    padding: 12px 16px;
-    height: 100vh;
-  }
+  .dashboard { padding: 12px 16px; height: 100vh; }
 
-  .header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
+  .header { flex-direction: column; align-items: stretch; gap: 12px; }
 
-  .title .h1 {
-    font-size: 20px;
-  }
+  .title .h1 { font-size: 20px; }
+  .subtitle { font-size: 13px; }
 
-  .subtitle {
-    font-size: 13px;
-  }
+  .ops { justify-content: flex-start; }
 
-  .ops {
-    justify-content: flex-start;
-  }
+  .ctrl, .ctrl.wide { width: 100%; min-width: unset; }
 
-  .ctrl, .ctrl.wide {
-    width: 100%;
-    min-width: unset;
-  }
+  .group { padding: 16px; }
+  .selectors { flex-direction: column; align-items: stretch; gap: 8px; }
+  .cards { gap: 16px; }
+  .card { min-height: 320px; }
+  .chart-card { min-height: 320px; }
 
-  .group {
-    padding: 16px;
-  }
-
-  .selectors {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-
-  .cards {
-    gap: 16px;
-  }
-
-  .card {
-    min-height: 320px;
-  }
-
-  .chart-card {
-    min-height: 320px;
-  }
-
-  .stat-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-
-  .stat-item span {
-    font-size: 13px;
-  }
-
-  .stat-item:not(span) {
-    font-size: 13px;
-  }
+  .stat-item { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .stat-item span { font-size: 13px; }
+  .stat-item:not(span) { font-size: 13px; }
 }
 
 @media (max-width: 480px) {
-  .dashboard {
-    padding: 8px 12px;
-  }
-
-  .group {
-    padding: 12px;
-  }
-
-  .group-title {
-    font-size: 16px;
-  }
-
-  .card-header {
-    padding: 12px 16px;
-  }
-
-  .stat-content {
-    padding: 16px;
-  }
-
-  .chart {
-    min-height: 280px;
-  }
-
-  .stat-card, .chart-card {
-    min-height: 300px;
-  }
+  .dashboard { padding: 8px 12px; }
+  .group { padding: 12px; }
+  .group-title { font-size: 16px; }
+  .card-header { padding: 12px 16px; }
+  .stat-content { padding: 16px; }
+  .chart { min-height: 280px; }
+  .stat-card, .chart-card { min-height: 300px; }
 }
 
-/* Loading state enhancement */
+/* Loading state */
 :deep(.el-loading-mask) {
   border-radius: 12px;
   background-color: rgba(248, 250, 252, 0.8);
 }
 
-/* Element Plus select styling enhancement */
-:deep(.el-select .el-input__inner) {
-  border-radius: 8px;
-}
-
-:deep(.el-select .el-input__wrapper) {
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-}
-
-:deep(.el-select .el-input__wrapper:hover) {
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
-}
+/* Element Plus select styling */
+:deep(.el-select .el-input__inner) { border-radius: 8px; }
+:deep(.el-select .el-input__wrapper) { border-radius: 8px; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); }
+:deep(.el-select .el-input__wrapper:hover) { box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1); }
 
 /* Button styling */
-:deep(.el-button) {
-  border-radius: 8px;
-  font-weight: 500;
-}
+:deep(.el-button) { border-radius: 8px; font-weight: 500; }
 </style>

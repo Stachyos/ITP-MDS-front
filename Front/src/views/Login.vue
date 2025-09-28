@@ -1,8 +1,7 @@
 <template>
   <div class="login-page">
     <el-card class="login-card" shadow="never">
-
-      <!-- 顶部 Logo 和 Title -->
+      <!-- Header: Logo & Title -->
       <div class="header">
         <img src="@/assets/logo.png" alt="Logo" class="logo" />
         <h1 class="main-title">Health Big Data Application</h1>
@@ -82,7 +81,6 @@
                 {{ sendBtnText }}
               </el-button>
             </div>
-
           </el-form-item>
         </template>
 
@@ -174,30 +172,30 @@ function startCountdown(sec = 60) {
 onBeforeUnmount(() => timer && clearInterval(timer))
 
 async function onSendCode() {
-  // 沿用 el-form 的 email 校验
+  // Reuse el-form's email validation
   await formRef.value?.validateField('email')
 
-  // 冷却中或正在发送则不处理
+  // Ignore clicks while cooling down or actively sending
   if (sendDisabled.value || sending.value) return
 
-  // 先进入 60s 冷却，不论请求结果
+  // Immediately start 60s cooldown regardless of request result
   sending.value = true
   startCountdown(60)
 
   try {
     const r = await apiSendEmailCode({ email: form.email })
-    // 形状归一化（兼容拦截器已把响应拍扁为 data）
+    // Normalize shape (compatible with interceptors that flatten to data)
     const resp = (r && r.data && r.data.reply !== undefined) ? r.data : r
 
     if (resp?.reply) {
       ElMessage.success(resp?.message || 'Verification code sent, please check your inbox')
-      // 不再二次 startCountdown，保持一次点击一次冷却
+      // Keep the single cooldown for this click
     } else {
-      // 软提示，不打断冷却
+      // Soft notice; do not interrupt cooldown
       ElMessage.warning(resp?.message || 'Sending… please check your inbox shortly')
     }
   } catch (e) {
-    // 仅对“超时”静默（配合 MDS.js 里的 silenceTimeout）
+    // Silent on timeout only (works with silenceTimeout in MDS.js)
     const isTimeout =
         e?.code === 'ECONNABORTED' ||
         /timeout of \d+ms exceeded/i.test(e?.message || '') ||
@@ -205,12 +203,11 @@ async function onSendCode() {
     if (!isTimeout) {
       ElMessage.error(e?.message || 'Failed to send, try again later')
     }
-    // 超时：保持冷却、静默/轻提示（这里选择静默）
+    // On timeout: keep cooldown and stay quiet
   } finally {
-    sending.value = false // 按钮仍因倒计时禁用
+    sending.value = false // Button remains disabled due to countdown
   }
 }
-
 
 /* ========== submit login ========== */
 async function onSubmit() {
@@ -228,14 +225,13 @@ async function onSubmit() {
     if (resp?.reply) {
       const token = resp.data
 
-      // 1) 先写入 Pinia / Storage（保持你原逻辑）
+      // 1) Persist token via Pinia/Storage (your original logic)
       const tokenStore = useTokenStore(pinia)
       tokenStore.setToken(token, form.remember)
 
-
-      // 2) 立刻把 token 写进 axios 默认头，保证后续所有请求都会自动携带
+      // 2) Set axios default Authorization header immediately
       setAuthToken(token)
-      // 如果你没导出 setAuthToken，也可以用这一行达到同样效果：
+      // Alternatively, if setAuthToken is not exported:
       // Request.defaults.headers.common.Authorization = `Bearer ${token}`
 
       console.log('✅ Login success:', {
@@ -251,7 +247,6 @@ async function onSubmit() {
     } else {
       throw new Error(resp?.message || 'Login failed')
     }
-
   } catch (err) {
     if (err?.message) ElMessage.error(err.message)
   } finally {
@@ -272,15 +267,14 @@ function onRegister() {
 }
 </script>
 
-
 <style scoped>
 .login-page {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start; /* 顶部开始，更自然 */
-  padding-top: 60px;          /* 保证登录框不会太靠下 */
+  justify-content: flex-start; /* start at top for a natural layout */
+  padding-top: 60px;          /* avoid the card sitting too low */
   background: linear-gradient(
       to bottom,
       #d1fae5 0%,
@@ -370,7 +364,7 @@ function onRegister() {
   font-size: 15px;
 }
 
-/* Element Plus 样式覆盖 */
+/* Element Plus overrides */
 :deep(.el-input__wrapper) {
   background: rgba(30, 41, 59, 0.05);
   border: 1px solid #d1d5db;
@@ -425,7 +419,6 @@ function onRegister() {
   opacity: 0.6;
 }
 
-
 .header {
   display: flex;
   flex-direction: column;
@@ -446,6 +439,4 @@ function onRegister() {
   color: #111827;
   text-align: center;
 }
-
-
 </style>

@@ -2,7 +2,7 @@
   <div class="register-page">
     <el-card class="register-card" shadow="never">
 
-      <!-- 顶部 Logo 和 Title - 与登录页保持一致 -->
+      <!-- Header: Logo & Title — consistent with login page -->
       <div class="header">
         <img src="@/assets/logo.png" alt="Logo" class="logo" />
         <h1 class="main-title">Health Big Data Application</h1>
@@ -165,7 +165,7 @@ async function onSubmit() {
     const resp = await apiRegister({ ...form })
     if (resp?.reply) {
       ElMessage.success(resp?.message || 'Registration successful')
-      // 添加延迟让用户看到成功消息
+      // Small delay so users can see the success toast
       await new Promise(resolve => setTimeout(resolve, 1_000))
       window.location.href = '/login'
     } else {
@@ -304,7 +304,7 @@ function goLogin() {
   font-weight: 600;
   border-radius: 10px;
   transition: all 0.3s ease;
-  margin:0;
+  margin: 0;
 }
 
 .back-btn:hover {
@@ -313,7 +313,7 @@ function goLogin() {
   color: #10b981;
 }
 
-/* Element Plus 样式覆盖 - 与登录页保持一致 */
+/* Element Plus overrides — consistent with login page */
 :deep(.el-input__wrapper) {
   background: rgba(30, 41, 59, 0.05);
   border: 1px solid #d1d5db;

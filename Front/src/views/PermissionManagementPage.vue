@@ -4,9 +4,9 @@
 
     <div class="main-content">
       <div class="content-header">
-        <h2 class="page-title">权限管理</h2>
+        <h2 class="page-title">Permission Management</h2>
         <div class="ops">
-          <el-button type="primary" @click="fetchPermissions" :loading="loading">刷新</el-button>
+          <el-button type="primary" @click="fetchPermissions" :loading="loading">Refresh</el-button>
         </div>
       </div>
 
@@ -17,42 +17,41 @@
           style="width: 100%"
           highlight-current-row
       >
-        <el-table-column prop="userId" label="用户ID" width="100" />
-        <el-table-column prop="account" label="账号" width="220" />
-        <el-table-column prop="email" label="邮箱" min-width="160" />
+        <el-table-column prop="userId" label="User ID" width="100" />
+        <el-table-column prop="account" label="Account" width="220" />
+        <el-table-column prop="email" label="Email" min-width="160" />
 
-
-        <el-table-column prop="optionEdit" label="table action" width="150">
+        <el-table-column prop="optionEdit" label="Table Actions" width="150">
           <template #default="{ row }">
             <el-switch v-model="row.optionEdit" />
           </template>
         </el-table-column>
 
-        <el-table-column prop="accessLogPage" label="access log" width="150">
+        <el-table-column prop="accessLogPage" label="Access Logs" width="150">
           <template #default="{ row }">
             <el-switch v-model="row.accessLogPage" />
           </template>
         </el-table-column>
 
-        <el-table-column prop="accessVisualPage" label="access analysis" width="150">
+        <el-table-column prop="accessVisualPage" label="Access Analysis" width="150">
           <template #default="{ row }">
             <el-switch v-model="row.accessVisualPage" />
           </template>
         </el-table-column>
 
-        <el-table-column prop="accessDisplayPage" label="access display" width="150">
+        <el-table-column prop="accessDisplayPage" label="Access Display" width="150">
           <template #default="{ row }">
             <el-switch v-model="row.accessDisplayPage" />
           </template>
         </el-table-column>
 
-        <el-table-column prop="permissionManagement" label="permission management" width="150">
+        <el-table-column prop="permissionManagement" label="Permission Management" width="180">
           <template #default="{ row }">
             <el-switch v-model="row.permissionManagement" />
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="Actions" width="200" fixed="right">
           <template #default="{ row }">
             <el-button
                 type="primary"
@@ -61,7 +60,7 @@
                 @click="savePermissionRow(row)"
                 :loading="savingId === row.userId"
             >
-              保存
+              Save
             </el-button>
             <el-button
                 type="danger"
@@ -70,7 +69,7 @@
                 @click="deletePermissionRow(row)"
                 :loading="deletingId === row.userId"
             >
-              删除
+              Delete
             </el-button>
           </template>
         </el-table-column>
@@ -88,6 +87,7 @@ import {
   savePermission,
   deletePermission
 } from '@/api/Permission.js'
+
 const headerKey = ref(0)
 
 const loading = ref(false)
@@ -95,55 +95,54 @@ const savingId = ref(null)
 const deletingId = ref(null)
 const permissionList = ref([])
 
-// 获取权限列表
+/** Fetch permission list */
 const fetchPermissions = async () => {
   loading.value = true
   try {
     const res = await getAllPermissions()
-    //TODO: for test
-    console.log('返回结果:', res)
+    // TODO: for test
+    console.log('Response:', res)
 
     // permissionList.value = res.data || []
     permissionList.value = res || []
-
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '加载失败')
+    ElMessage.error(err?.response?.data?.message || err?.message || 'Failed to load')
   } finally {
     loading.value = false
   }
 }
 
-// 保存单个用户的权限
+/** Save a single user's permissions */
 const savePermissionRow = async (row) => {
   savingId.value = row.userId
   try {
     await savePermission(row)
-    ElMessage.success(`用户 ${row.account} (${row.email}) 权限已更新`)
+    ElMessage.success(`Permissions updated for ${row.account} (${row.email})`)
     await fetchPermissions()
     headerKey.value++
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '保存失败')
+    ElMessage.error(err?.response?.data?.message || err?.message || 'Save failed')
   } finally {
     savingId.value = null
   }
 }
 
-// 删除单个用户权限
+/** Delete a single user's permissions */
 const deletePermissionRow = async (row) => {
   try {
     await ElMessageBox.confirm(
-        `确定删除用户 ${row.account} (${row.email}) 的权限吗？`,
-        '提示',
-        { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
+        `Delete permissions for user ${row.account} (${row.email})?`,
+        'Confirm',
+        { type: 'warning', confirmButtonText: 'Delete', cancelButtonText: 'Cancel' }
     )
     deletingId.value = row.userId
     await deletePermission(row.permissionId)
-    ElMessage.success('删除成功')
+    ElMessage.success('Deleted successfully')
     await fetchPermissions()
     headerKey.value++
   } catch (err) {
     if (err !== 'cancel') {
-      ElMessage.error(err?.response?.data?.message || err?.message || '删除失败')
+      ElMessage.error(err?.response?.data?.message || err?.message || 'Delete failed')
     }
   } finally {
     deletingId.value = null

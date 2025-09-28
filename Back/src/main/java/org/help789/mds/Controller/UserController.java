@@ -30,10 +30,10 @@ public class UserController {
     @Resource
     private UserRepository userRepository;
 
-    /** 账号密码登录（form-urlencoded） */
+    /** Account & password login (form-urlencoded) */
     @LogAction(
             value = "user:login",
-            detail = "账号密码登录：account=#{#account}，记住登录=#{#remember?:false}"
+            detail = "Account/password login: account=#{#account}, remember=#{#remember?:false}"
     )
     @PostMapping(
             value = "/login",
@@ -45,14 +45,14 @@ public class UserController {
             @RequestParam String password,
             @RequestParam(required = false, defaultValue = "true") Boolean remember
     ) {
-        // ⚠️ 不记录 password
+        // ⚠️ Do NOT log the password
         return userService.loginBySecretWithPassword(account, password);
     }
 
-    /** 发送验证码（form-urlencoded） */
+    /** Send verification code (form-urlencoded) */
     @LogAction(
             value = "user:send-code",
-            detail = "发送邮箱验证码：email=#{#email}，IP=#{#req?.getHeader('X-Forwarded-For')?:#req?.getHeader('X-Real-IP')?:#req?.getRemoteAddr()}"
+            detail = "Send email verification code: email=#{#email}, IP=#{#req?.getHeader('X-Forwarded-For')?:#req?.getHeader('X-Real-IP')?:#req?.getRemoteAddr()}"
     )
     @PostMapping(
             value = "/send-email-code",
@@ -61,27 +61,27 @@ public class UserController {
     )
     public Result<Void> sendCodeForm(@RequestParam @Email String email, HttpServletRequest req) {
         if (!email.endsWith("@qq.com") && !email.endsWith("@foxmail.com")) {
-            return Result.failed("仅支持 QQ/Foxmail 邮箱");
+            return Result.failed("Only QQ/Foxmail email is supported");
         }
         if (!userRepository.existsByEmail(email)) {
-            return Result.failed("邮箱未注册");
+            return Result.failed("Email is not registered");
         }
         String ip = realIp(req);
         try {
             emailCodeService.checkRateLimit(email, ip);
             String code = emailCodeService.generateAndStore(email);
             mailSenderService.sendLoginCode(email, code);
-            return Result.success("验证码已发送", (Void) null);
+            return Result.success("Verification code sent", (Void) null);
         } catch (IllegalStateException tooMany) {
             return Result.failed(tooMany.getMessage());
         } catch (Exception e) {
-            return Result.failed("发送失败，请稍后再试");
+            return Result.failed("Failed to send, please try again later");
         }
     }
 
     @LogAction(
             value = "user:login-email",
-            detail = "邮箱验证码登录：email=#{#email}，验证码长度=#{#code?.length()?:0}"
+            detail = "Email code login: email=#{#email}, code length=#{#code?.length()?:0}"
     )
     @PostMapping(
             value = "/login-email",
@@ -90,14 +90,14 @@ public class UserController {
     )
     public Result<String> loginEmailForm(@RequestParam @Email String email,
                                          @RequestParam String code) {
-        // ⚠️ 不记录明文 code，只记录长度
+        // ⚠️ Do NOT log the raw code, only its length
         return userService.loginByEmail(email, code);
     }
 
-    // 注册（form-urlencoded）— 用 @ModelAttribute 绑定到 VO
+    // Registration (form-urlencoded) — bind to VO with @ModelAttribute
     @LogAction(
             value = "user:register",
-            detail = "用户注册：account=#{#req?.account?:'-'}，email=#{#req?.email?:'-'}"
+            detail = "User registration: account=#{#req?.account?:'-'}, email=#{#req?.email?:'-'}"
     )
     @PostMapping(
             value = "/register",
@@ -105,7 +105,7 @@ public class UserController {
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public Result<String> registerForm(@Valid RegisterReq req) {
-        // ⚠️ 不记录密码等敏感字段
+        // ⚠️ Do NOT log sensitive fields like passwords
         return userService.register(req);
     }
 
@@ -122,8 +122,6 @@ public class UserController {
     )
     public Result<String> getUserId() {
         System.out.println(userService.getUserId());
-        return userService.getUserId(); // 请确保返回的是 Result<String>
+        return userService.getUserId(); // Ensure this returns Result<String>
     }
-
-
 }
