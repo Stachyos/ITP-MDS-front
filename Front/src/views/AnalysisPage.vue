@@ -36,7 +36,6 @@
       </div>
     </div>
 
-
     <div class="groups" v-loading="loading">
 
       <div class="group">
