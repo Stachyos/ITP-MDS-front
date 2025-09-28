@@ -45,4 +45,9 @@ public class Result<T> {
     public static Result failed(String message){
         return new Result(false, message, null, null);
     }
+
+    // 返回 message 字段的值
+    public String getMsg() {
+        return message;
+    }
 }

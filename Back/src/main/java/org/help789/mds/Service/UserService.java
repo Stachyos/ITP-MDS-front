@@ -1,5 +1,6 @@
 package org.help789.mds.Service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.help789.mds.Entity.Vo.RegisterReq;
 import org.help789.mds.Utils.pojo.Result;
 
@@ -11,5 +12,8 @@ public interface UserService {
     Result<String> register(RegisterReq req);
     // UserService.java
     Result<String> loginByEmail(String email, String code);
+
+    public Result<Void> sendCodeForm(String email, HttpServletRequest request);
+
 
 }

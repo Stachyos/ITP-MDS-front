@@ -1,6 +1,7 @@
 package org.help789.mds.Service.ServiceImpl;
 
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.help789.mds.Entity.User;
 import org.help789.mds.Entity.Vo.RegisterReq;
@@ -160,5 +161,18 @@ public class UserServiceImpl implements UserService {
         return Result.success("登录成功", token);
     }
 
+    @Override
+    public Result<Void> sendCodeForm(String email, HttpServletRequest request) {
+        // 模拟邮箱验证码生成和发送逻辑
+        if (email == null || email.isBlank()) {
+            return Result.failed("邮箱不能为空");
+        }
+        if (!userRepository.existsByEmail(email)) {
+            return Result.failed("邮箱未注册");
+        }
+        String code = emailCodeService.generateAndStore(email);
+        mailSenderService.sendLoginCode(email, code);
+        return Result.success("验证码已发送", (Void) null);
+    }
 
 }
