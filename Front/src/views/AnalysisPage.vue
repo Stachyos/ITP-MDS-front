@@ -297,32 +297,8 @@ export default {
 
   async mounted() {
     await this.fetchAll()
-
-    // Check and fix negative ages
-    const negativeCount = this.checkNegativeAges()
-    if (negativeCount > 0) {
-      console.log(`Found and fixed ${negativeCount} records with negative age`)
-    }
-
-    // Boundary tests
-    console.log('Age bucket tests:')
-    const testCases = [
-      { age: -5, expected: 'Unknown' },
-      { age: -1, expected: 'Unknown' },
-      { age: 0, expected: '0~18' },
-      { age: 17, expected: '0~18' },
-      { age: 18, expected: '18~30' },
-      { age: 25, expected: '18~30' },
-      { age: 85, expected: '80+' }
-    ]
-
-    testCases.forEach(test => {
-      const result = this.ageBucket(test.age)
-      const status = result === test.expected ? '✓' : '✗'
-      console.log(`${status} age ${test.age} -> ${result} (expected: ${test.expected})`)
-    })
-
-    this.$nextTick(() => this.renderAll())
+    this.initCharts()
+    this.renderAll()
     window.addEventListener('resize', this.handleResize)
   },
 
@@ -338,38 +314,11 @@ export default {
       try {
         const res = await getAllHealthRecords()
         const data = Array.isArray(res?.data) ? res.data : (res?.data?.data ?? [])
-
-        // Cleanup: set negative/invalid ages to null
-        this.raw = (data || []).map(record => {
-          if (record.age != null) {
-            const age = Number(record.age)
-            if (isNaN(age) || !isFinite(age) || age < 0 || age > 150) {
-              return { ...record, age: null }
-            }
-          }
-          return record
-        })
-
-        // Stats log
-        const validAges = this.raw.map(r => r.age).filter(age => age != null && age >= 0)
-        const negativeAges = this.raw.filter(r => {
-          const age = Number(r.age)
-          return !isNaN(age) && age < 0
-        })
-
-        console.log('Data cleanup stats:', {
-          total: this.raw.length,
-          validAgeCount: validAges.length,
-          negativeAgeCount: negativeAges.length,
-          negativeAgeSamples: negativeAges.slice(0, 3).map(r => r.age)
-        })
-
+        this.raw = data || []
       } catch (e) {
         ElMessage.error(e?.message || 'Load failed')
         this.raw = []
-      } finally {
-        this.loading = false
-      }
+      } finally { this.loading = false }
     },
     async reload() {
       await this.fetchAll()
@@ -392,27 +341,7 @@ export default {
     // ---- Utils ----
     metricDef(key){ return this.metrics.find(m=>m.key===key) },
     metricLabel(key){ return this.metricDef(key)?.label || key },
-    bucketize(val, cuts) {
-      if (val == null || Number.isNaN(val) || !isFinite(val)) {
-        return 'Unknown'
-      }
-      if (val < 0) {
-        return 'Unknown'
-      }
-      if (!cuts || !Array.isArray(cuts) || cuts.length === 0) {
-        return 'Unknown'
-      }
-      const sortedCuts = [...cuts].sort((a, b) => a - b)
-      if (val < sortedCuts[0]) {
-        return `0~${sortedCuts[0]}`
-      }
-      for (let i = 1; i < sortedCuts.length; i++) {
-        if (val < sortedCuts[i]) {
-          return `${sortedCuts[i-1]}~${sortedCuts[i]}`
-        }
-      }
-      return `${sortedCuts[sortedCuts.length - 1]}+`
-    },
+    bucketize(val, cuts){ if (val==null||Number.isNaN(val)) return 'Unknown（未知）'; for(let i=0;i<cuts.length;i++){ if(val<cuts[i]) return `${i===0?'-∞':cuts[i-1]}~${cuts[i]}` } return `${cuts[cuts.length-1]}+` },
     bucketLabels(cuts){
       const a=[]
       for(let i=0;i<cuts.length;i++){ a.push(i===0?`-∞~${cuts[i]}`:`${cuts[i-1]}~${cuts[i]}`) }
@@ -863,28 +792,6 @@ export default {
           { name:'95% CI', type:'custom', encode:{ x:0, y:[1,2] }, data: errData, renderItem, z: 10 }
         ]
       })
-    },
-
-    // Helper to check negative ages
-    checkNegativeAges() {
-      const negativeAges = this.raw.filter(record => {
-        const age = Number(record.age)
-        return !isNaN(age) && age < 0
-      })
-
-      if (negativeAges.length > 0) {
-        console.warn('Found negative age records:', negativeAges)
-        // Auto-fix
-        negativeAges.forEach(record => {
-          const index = this.raw.findIndex(r => r === record)
-          if (index !== -1) {
-            this.raw[index] = { ...record, age: null }
-          }
-        })
-        console.log('Auto-fixed negative age records')
-      }
-
-      return negativeAges.length
     },
 
     // ---- Others ----
