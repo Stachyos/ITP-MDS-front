@@ -8,6 +8,7 @@ import org.help789.mds.Entity.Vo.RegisterReq;
 import org.help789.mds.Service.EmailCodeService;
 import org.help789.mds.Service.MailSenderService;
 import org.help789.mds.Service.UserService;
+import org.help789.mds.Utils.ThreadLocalUtil;
 import org.help789.mds.Utils.pojo.Result;
 import org.help789.mds.logging.LogAction;           // ✅ 新增
 import org.help789.mds.repository.UserRepository;
@@ -117,4 +118,15 @@ public class UserController {
         // ⚠️ 不记录密码等敏感字段
         return userService.register(req);
     }
+
+    @GetMapping(
+            value = "/getUserId",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public Result<String> getUserId() {
+        System.out.println(userService.getUserId());
+        return userService.getUserId(); // 请确保返回的是 Result<String>
+    }
+
+
 }

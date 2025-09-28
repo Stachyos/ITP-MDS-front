@@ -202,5 +202,16 @@ public class UserServiceImpl implements UserService {
         return Result.success("登录成功", token);
     }
 
+    @Override
+    public Result<String> getUserId() {
+        Long current = ThreadLocalUtil.getCurrentUserId(); // 可能是 Long / 可能为 null
+        if (current == null) {
+            return Result.failed("not logged in"); // 自定义错误信息
+        }
+        System.out.println("userid: " + ThreadLocalUtil.getCurrentUserId());
+        return Result.success(current.toString());
+    }
+
+
 
 }

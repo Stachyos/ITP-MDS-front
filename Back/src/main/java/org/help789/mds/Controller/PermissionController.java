@@ -36,6 +36,7 @@ public class PermissionController {
     )
     @GetMapping("/{userId}")
     public PermissionVo getPermissionByUserId(@PathVariable Long userId) {
+        System.out.println("PermissionController.getPermissionByUserId: " + permissionService.getPermissionByUserId(userId));
         return permissionService.getPermissionByUserId(userId);
     }
 
