@@ -298,32 +298,8 @@ export default {
 
   async mounted() {
     await this.fetchAll()
-
-    // 检查并修复负数年龄
-    const negativeCount = this.checkNegativeAges()
-    if (negativeCount > 0) {
-      console.log(`发现并修复了 ${negativeCount} 条负数年龄记录`)
-    }
-
-    // 测试各种边界情况
-    console.log('年龄分桶测试:')
-    const testCases = [
-      { age: -5, expected: '未知 (Unknown)' },
-      { age: -1, expected: '未知 (Unknown)' },
-      { age: 0, expected: '0~18' },
-      { age: 17, expected: '0~18' },
-      { age: 18, expected: '18~30' },
-      { age: 25, expected: '18~30' },
-      { age: 85, expected: '80+' }
-    ]
-
-    testCases.forEach(test => {
-      const result = this.ageBucket(test.age)
-      const status = result === test.expected ? '✓' : '✗'
-      console.log(`${status} 年龄 ${test.age} -> ${result} (期望: ${test.expected})`)
-    })
-
-    this.$nextTick(() => this.renderAll())
+    this.initCharts()
+    this.renderAll()
     window.addEventListener('resize', this.handleResize)
   },
 
@@ -339,39 +315,11 @@ export default {
       try {
         const res = await getAllHealthRecords()
         const data = Array.isArray(res?.data) ? res.data : (res?.data?.data ?? [])
-
-        // 清理数据：将负数年龄设为 null
-        this.raw = (data || []).map(record => {
-          if (record.age != null) {
-            const age = Number(record.age)
-            // 明确拒绝负数
-            if (isNaN(age) || !isFinite(age) || age < 0 || age > 150) {
-              return { ...record, age: null }
-            }
-          }
-          return record
-        })
-
-        // 统计信息
-        const validAges = this.raw.map(r => r.age).filter(age => age != null && age >= 0)
-        const negativeAges = this.raw.filter(r => {
-          const age = Number(r.age)
-          return !isNaN(age) && age < 0
-        })
-
-        console.log('数据清理统计:', {
-          总记录数: this.raw.length,
-          有效年龄数: validAges.length,
-          负数年龄数: negativeAges.length,
-          负数年龄样例: negativeAges.slice(0, 3).map(r => r.age)
-        })
-
+        this.raw = data || []
       } catch (e) {
         ElMessage.error(e?.message || 'Load failed（加载失败）')
         this.raw = []
-      } finally {
-        this.loading = false
-      }
+      } finally { this.loading = false }
     },
     async reload() {
       await this.fetchAll()
@@ -394,38 +342,7 @@ export default {
     // ---- Utils ----
     metricDef(key){ return this.metrics.find(m=>m.key===key) },
     metricLabel(key){ return this.metricDef(key)?.label || key },
-    bucketize(val, cuts) {
-      // 首先检查值的有效性
-      if (val == null || Number.isNaN(val) || !isFinite(val)) {
-        return '未知 (Unknown)'
-      }
-
-      // 明确拒绝负数年龄
-      if (val < 0) {
-        return '未知 (Unknown)'
-      }
-
-      if (!cuts || !Array.isArray(cuts) || cuts.length === 0) {
-        return '未知 (Unknown)'
-      }
-
-      const sortedCuts = [...cuts].sort((a, b) => a - b)
-
-      // 第一个区间：0 ~ 第一个切割点（不包括第一个切割点）
-      if (val < sortedCuts[0]) {
-        return `0~${sortedCuts[0]}`
-      }
-
-      // 中间区间
-      for (let i = 1; i < sortedCuts.length; i++) {
-        if (val < sortedCuts[i]) {
-          return `${sortedCuts[i-1]}~${sortedCuts[i]}`
-        }
-      }
-
-      // 最后一个区间
-      return `${sortedCuts[sortedCuts.length - 1]}+`
-    },
+    bucketize(val, cuts){ if (val==null||Number.isNaN(val)) return 'Unknown（未知）'; for(let i=0;i<cuts.length;i++){ if(val<cuts[i]) return `${i===0?'-∞':cuts[i-1]}~${cuts[i]}` } return `${cuts[cuts.length-1]}+` },
     bucketLabels(cuts){
       const a=[]
       for(let i=0;i<cuts.length;i++){ a.push(i===0?`-∞~${cuts[i]}`:`${cuts[i-1]}~${cuts[i]}`) }
@@ -802,12 +719,12 @@ export default {
           }
         },
         grid: {
-          left: 120,
+          left: 120,        // 增加左边距给Y轴标签更多空间
           right: 40,
           top: 50,
           bottom: 100,
-          height: numKeys.length * 30,
-          width: 'auto',
+          height: numKeys.length * 30, // 根据变量数量动态设置高度
+          width: 'auto',    // 自动宽度
           containLabel: true
         },
         xAxis: {
@@ -852,9 +769,8 @@ export default {
           textStyle: {
             fontSize: 10
           },
-          // 方案1：使用简单的颜色渐变（推荐）
           inRange: {
-            color: ['#1a3670', '#597ef7', '#adc6ff', '#f0f0f0', '#ffccc7', '#ff4d4f', '#a8071a']
+            color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
           }
         },
         series: [{
@@ -870,6 +786,7 @@ export default {
             show: true,
             formatter: ({ value }) => {
               const num = value[2]
+              // 只在相关性较强时显示数值，避免图表过于拥挤
               if (Math.abs(num) > 0.3) {
                 return this.fmt(num)
               }
@@ -1104,27 +1021,6 @@ export default {
           { name:'95% CI（置信区间）', type:'custom', encode:{ x:0, y:[1,2] }, data: errData, renderItem, z: 10 }
         ]
       })
-    },
-    // 专门检查负数年龄的方法
-    checkNegativeAges() {
-      const negativeAges = this.raw.filter(record => {
-        const age = Number(record.age)
-        return !isNaN(age) && age < 0
-      })
-
-      if (negativeAges.length > 0) {
-        console.warn('发现负数年龄记录:', negativeAges)
-        // 可以选择自动修复
-        negativeAges.forEach(record => {
-          const index = this.raw.findIndex(r => r === record)
-          if (index !== -1) {
-            this.raw[index] = { ...record, age: null }
-          }
-        })
-        console.log('已自动修复负数年龄记录')
-      }
-
-      return negativeAges.length
     },
 
     // ---- Others ----
