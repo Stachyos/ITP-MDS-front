@@ -1,4 +1,3 @@
-// 列定义与映射（供导出复用）
 
 export const EXPORT_COLUMNS = [
     { key: 'recordId',         title: 'ID' },
