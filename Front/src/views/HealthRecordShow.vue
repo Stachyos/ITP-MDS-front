@@ -57,7 +57,6 @@
             </template>
           </el-table-column>
 
-
           <el-table-column prop="bun" label="尿素氮" width="100" />
           <el-table-column prop="uricAcid" label="尿酸" width="100" />
           <el-table-column prop="creatinine" label="肌酐" width="100" />
