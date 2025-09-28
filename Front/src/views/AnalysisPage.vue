@@ -48,7 +48,7 @@
               v-model="selectedVariable"
               size="large"
               class="ctrl"
-              placeholder="Select Variable（选择变量）"
+              placeholder="Select Variable"
               @change="updateStatValue"
           >
             <el-option
@@ -64,13 +64,13 @@
               v-model="selectedStat"
               size="large"
               class="ctrl"
-              placeholder="Select Stat（选择统计数据）"
+              placeholder="Select Stat"
               @change="updateStatValue"
           >
-            <el-option value="mean" label="Mean（均值）" />
-            <el-option value="median" label="Median（中位数）" />
-            <el-option value="mode" label="Mode（众数）" />
-            <el-option value="std" label="Standard Deviation（标准差）" />
+            <el-option value="mean" label="Mean" />
+            <el-option value="median" label="Median" />
+            <el-option value="mode" label="Mode" />
+            <el-option value="std" label="Standard Deviation" />
           </el-select>
 
           <!-- Display Selected Stat Value -->
@@ -257,9 +257,9 @@ export default {
 
   data() {
     return {
-      selectedVariable: 'totalCholesterol（总胆固醇）',  // 当前选择的变量（例如总胆固醇）
-      selectedStat: 'mean',  // 默认选择 "均值"
-      selectedStatValue: null,  // 存储选中的统计数据值
+      selectedVariable: 'totalCholesterol',
+      selectedStat: 'mean',
+      selectedStatValue: null,
       loading: false,
       raw: [],
 
@@ -446,7 +446,7 @@ export default {
     // ---- Utils ----
     metricDef(key){ return this.metrics.find(m=>m.key===key) },
     metricLabel(key){ return this.metricDef(key)?.label || key },
-    bucketize(val, cuts){ if (val==null||Number.isNaN(val)) return 'Unknown（未知）'; for(let i=0;i<cuts.length;i++){ if(val<cuts[i]) return `${i===0?'-∞':cuts[i-1]}~${cuts[i]}` } return `${cuts[cuts.length-1]}+` },
+    bucketize(val, cuts){ if (val==null||Number.isNaN(val)) return 'Unknown'; for(let i=0;i<cuts.length;i++){ if(val<cuts[i]) return `${i===0?'-∞':cuts[i-1]}~${cuts[i]}` } return `${cuts[cuts.length-1]}+` },
     bucketLabels(cuts){
       const a=[]
       for(let i=0;i<cuts.length;i++){ a.push(i===0?`-∞~${cuts[i]}`:`${cuts[i-1]}~${cuts[i]}`) }
